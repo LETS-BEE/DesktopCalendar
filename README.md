@@ -1,5 +1,7 @@
 # desktop-calendar
 
+## 이 프로젝트는 tbvjaos510의 DesktopCalendar를 Fork하여 일부 수정중입니다.
+
 ## Project setup
 ```
 yarn install

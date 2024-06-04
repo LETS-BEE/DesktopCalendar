@@ -3,7 +3,7 @@ node_modules
 /dist
 
 # Google API Key
-/src/private/credentials.json
+./src/private/credentials.json
 
 # local env files
 .env.local

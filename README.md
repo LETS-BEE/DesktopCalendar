@@ -47,7 +47,7 @@
 * [fix] 설정의 새로고침 시간 정상적으로 출력되도록 수정
 * [add] 수정 기능 추가
 * [add] 메모장 기능 추가
-<img src="public/memo.png"
+<img src="public/memo.png"/>
 
 ## 3.0.4
 * [fix] 재부팅 혹은 프로그램 종료 후 재실행시 크기 오류 수정

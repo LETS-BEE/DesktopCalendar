@@ -1,11 +1,9 @@
 // import google api
-import credentials from "@/private/credentials.json";
-import { remote } from "electron";
-import fs from "fs";
-import { google } from "googleapis";
+import { google } from 'googleapis'
+import * as remote from '@electron/remote'
+import fs from 'fs'
 
-// import 'google-auth-library'
-// import { OAuth2Client } from 'google-auth-library'
+import credentials from '@/private/credentials.json'
 
 const TOKEN_PATH = window.appdata + "/token.json";
 const SCOPES = [
@@ -13,7 +11,9 @@ const SCOPES = [
   "https://www.googleapis.com/auth/calendar.events"
 ];
 var APIKEY = null;
-let Popup;
+let Popup = null;
+var axios
+
 /**
  * code로 토큰을 만듭니다.
  * @param {string} code 코드
@@ -22,13 +22,7 @@ function createToken(client, code, callback) {
   client.getToken(code, (err, token) => {
     if (err) return console.error("Error Create Token", err);
     client.setCredentials(token);
-    console.log(TOKEN_PATH);
-    fs.writeFile(TOKEN_PATH, JSON.stringify(token), err => {
-      if (err) return console.error(err);
-      // console.log('token success stored')
-      APIKEY = token.access_token;
-      callback(APIKEY);
-    });
+    return FileWrite(token, callback)
   });
 }
 
@@ -40,33 +34,47 @@ function getAccessToken(client, callback) {
     access_type: "offline",
     scope: SCOPES
   });
-  // console.log('Auth in authUrl', authUrl)
-  Popup = new remote.BrowserWindow({ transparent: false, frame: true });
-  Popup.setIgnoreMouseEvents(false);
-  Popup.setMenuBarVisibility(false);
-  Popup.loadURL(authUrl);
-  window.Popup = Popup;
-  Popup.on("closed", () => {
-    Popup = null;
-  });
-  Popup.on("page-title-updated", (e, t) => {
-    if (t.indexOf("Success code=") !== -1) {
-      createToken(client, t.split("Success code=")[1], callback);
-      Popup.close();
-    }
-  });
+  if (Popup === null) {
+    Popup = new remote.BrowserWindow({ height: 850, transparent: false, frame: true });
+    Popup.setIgnoreMouseEvents(false);
+    Popup.setMenuBarVisibility(false);
+    Popup.loadURL(authUrl);
+    window.Popup = Popup;
+    Popup.on("closed", () => {
+      Popup = null;
+    })
+    
+    Popup.webContents.on("will-redirect", (e, url) => {
+      //console.log(url, url.indexOf("http://localhost"))
+      if (url.indexOf("http://localhost") == 0) {
+        url = decodeURIComponent(url.split("&")[0].split("code=")[1])
+        createToken(client, url, callback)
+        Popup.close()
+      }
+    })
+  }
 }
 function RefreshToken(client, callback) {
   client.refreshAccessToken((err, data) => {
-    if (err) return console.error(err);
-    fs.writeFile(TOKEN_PATH, JSON.stringify(data), err => {
-      if (err) return console.error(err);
-      APIKEY = data.access_token;
-      if (callback) callback(APIKEY);
-    });
+    if (err) {
+      return console.error(err)
+    }
+    return FileWrite(data, callback)
   });
 }
-var axios;
+
+function FileWrite(Data, Callback) {
+  fs.writeFile(TOKEN_PATH, JSON.stringify(Data), err => {
+    if (err) {
+      return console.error(err)
+    }
+    APIKEY = Data.access_token
+    if (Callback) {
+      Callback(APIKEY)
+    }
+  })
+}
+
 export default {
   /**
    * Create an OAuth2 client with the given credentials, and then execute the
@@ -74,25 +82,29 @@ export default {
    * @param {function} callback The callback to call with the authorized client.
    */
   authorize(callback) {
-    const { clientsecret, clientid, redirecturis } = credentials.installed;
     const oAuth2Client = new google.auth.OAuth2(
-      clientid,
-      clientsecret,
-      redirecturis[0]
-    );
+      credentials.installed.client_id,
+      credentials.installed.client_secret,
+      credentials.installed.redirect_uris[0]
+    )
+
     // Check if we have previously stored a token.r
     fs.readFile(TOKEN_PATH, (err, token) => {
-      if (err || !token) return getAccessToken(oAuth2Client, callback);
-      token = JSON.parse(token);
-      oAuth2Client.setCredentials(token);
-      APIKEY = token.access_token;
-      setInterval(() => {
-        RefreshToken(oAuth2Client);
-      }, 50 * 60 * 1000);
+      if (err || !token) { 
+        return getAccessToken(oAuth2Client, callback)
+      }
+
+      token = JSON.parse(token)
+      oAuth2Client.setCredentials(token)
+      APIKEY = token.access_token
+      setInterval(() => { RefreshToken(oAuth2Client) }, 2 * 50 * 60 * 1000)
+
       if (token.expiry_date <= new Date()) {
         RefreshToken(oAuth2Client, callback);
-      } else callback(APIKEY);
-    });
+      } else {
+        callback(APIKEY);
+      }
+    })
   },
   setAxios(axi) {
     axios = axi;
@@ -176,4 +188,4 @@ export default {
         cb(null, err);
       });
   }
-};
+}

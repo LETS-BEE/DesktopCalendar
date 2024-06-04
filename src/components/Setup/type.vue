@@ -1,5 +1,5 @@
 <template>
-  <div class="uk-margin-large-top uk-text-center">
+  <div class="uk-text-center">
     <span class="uk-text-lead">달력 종류 선택 </span>
     <br />
     <table class="uk-table uk-margin-remove-top">
@@ -14,7 +14,7 @@
               id="monthView"
               value="month"
             />
-            <label for="monthView">한 달</label>
+            <label class="uk-margin-small-left" for="monthView">한 달</label>
           </th>
           <th class="uk-text-center">
             <input
@@ -25,7 +25,7 @@
               id="weekView"
               value="week"
             />
-            <label for="weekView">3주</label>
+            <label class="uk-margin-small-left" for="weekView">3주</label>
           </th>
         </tr>
       </thead>
@@ -41,12 +41,10 @@
       </tbody>
     </table>
 
-    <vk-button
-      class="uk-position-medium uk-position-top-right"
-      type="primary"
-      size="small"
+    <button
+      class="uk-button uk-button-primary uk-button-small uk-position-medium uk-position-top-right"
       uk-slideshow-item="4"
-      >다음</vk-button
+      >다음</button
     >
   </div>
 </template>
@@ -73,7 +71,7 @@ export default {
     this.types = this.settings.calendarType;
   },
   watch: {
-    types(newval, old) {
+    types(newval) {
       this.$store.commit("setOptions", {
         key: "calendarType",
         value: newval

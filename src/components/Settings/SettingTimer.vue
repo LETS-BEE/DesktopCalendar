@@ -1,5 +1,5 @@
 <template>
-  <div class="uk-padding-large uk-padding-remove-top">
+  <div class="uk-padding-large uk-padding-remove-top uk-margin-small-top">
     <h2>Time 설정</h2>
     <span class="uk-text-muted">
       표시되는 시간의 형식을 변경합니다. &nbsp;
@@ -12,11 +12,11 @@
       />
       미리보기: <span v-text="exampleMoment"></span>
       <div>
-        <vk-button type="primary" size="small" @click="saveMoment"
-          >적용하기</vk-button
+        <button class="uk-button uk-button-primary uk-button-small" @click="saveMoment"
+          >적용하기</button
         >
-        <vk-button type="secondary" size="small" @click="showHelp = !showHelp"
-          >문법 설명</vk-button
+        <button class="uk-button uk-button-secondary uk-button-small" @click="showHelp = !showHelp"
+          >문법 설명</button
         >
         <transition name="fade">
           <table
@@ -149,7 +149,8 @@
 </template>
 
 <script>
-import { moment } from "fullcalendar";
+import 'fullcalendar'
+import moment from 'moment'
 // import SystemFonts from 'system-font-families'
 // const systemFonts = new SystemFonts()
 
@@ -168,47 +169,52 @@ export default {
       if (typeof e === "object") {
         this.setting.timeMoment = e.target.value;
         this.exampleMoment = moment(this.exampleTime)
-          .locale("ko")
-          .format(e.target.value);
+          .locale(window.defaultLocale)
+          .format(e.target.value)
       } else
         this.exampleMoment = moment(this.exampleTime)
-          .locale("ko")
-          .format(e);
+          .locale(window.defaultLocale)
+          .format(e)
     },
     time() {
-      this.exampleTime = new Date();
-      this.changeTime(document.getElementById("Timer").value);
+      this.exampleTime = new Date()
+      this.changeTime(document.getElementById("Timer").value)
     },
     met(format) {
       return moment(this.exampleTime)
-        .locale("ko")
+        .locale(window.defaultLocale)
         .format(format);
     },
     save(key, value) {
-      this.setting.changeOption(key, value);
+      this.setting.changeOption(key, value)
     },
-    saveMoment(e) {
-      this.save("timeMoment", document.getElementById("Timer").value);
+    saveMoment() {
+      this.save("timeMoment", document.getElementById("Timer").value)
     },
     updateSize(e) {
-      this.setting.timerStyle.size = e.target.value;
-      this.save("timerStyle", this.setting.timerStyle);
+      this.setting.timerStyle.size = e.target.value
+      this.save("timerStyle", this.setting.timerStyle)
     },
     updateWeight(e) {
-      this.setting.timerStyle.weight = e.target.value;
-      this.save("timerStyle", this.setting.timerStyle);
+      this.setting.timerStyle.weight = e.target.value
+      this.save("timerStyle", this.setting.timerStyle)
     },
     updateColor(e) {
-      this.setting.timerStyle.color = e.target.value;
-      this.save("timerStyle", this.setting.timerStyle);
+      this.setting.timerStyle.color = e.target.value
+      this.save("timerStyle", this.setting.timerStyle)
     }
   },
-  props: ["setting"],
+  props: ["set"],
   mounted() {
-    this.changeTime(this.setting.tiemMoment);
+    this.changeTime(this.setting.tiemMoment)
     setTimeout(() => {
-      this.interval = setInterval(this.time, 1000);
-    }, 1000 - new Date().getMilliseconds()); // Millisecond 맞춤
+      this.interval = setInterval(this.time, 1000)
+    }, 1000 - new Date().getMilliseconds()) // Millisecond 맞춤
+  },
+  computed: {
+    setting() {
+      return this.set
+    }
   }
 };
 </script>

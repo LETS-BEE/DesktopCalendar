@@ -1,64 +1,60 @@
-import "@vuikit/theme/dist/vuikit.min.css";
-import "uikit/dist/css/uikit.min.css";
-import "vue-datetime/dist/vue-datetime.css";
-import VuikitIcons from "@vuikit/icons";
+import 'uikit/dist/css/uikit.min.css'
 import axios from "axios";
-import $ from "jquery";
-import { Settings } from "luxon";
-import Vue from "vue";
-import VueBus from "vue-bus";
-import Datetime from "vue-datetime";
-import linkify from "vue-linkify";
-import Vuikit from "vuikit";
+import $ from 'jquery'
+import jQueryUI from 'jquery-ui'
 
-import App from "./App";
-import router from "./router";
-import store from "./store";
+import { createApp } from 'vue'
+import { app, getCurrentWindow } from '@electron/remote'
 
-window.$ = $;
+import Emitter from 'tiny-emitter'
+import Datepicker from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
+import Vue3linkify from 'vue-3-linkify'
+
+import { Settings } from 'luxon'
+
+import App from './App.vue'
+import router from './router'
+import store from './store'
+
+// jquery
+window.$ = $
+// fullcalendar datepicker 때문에 추가
+window.jQuery = jQueryUI
 
 // datepicker Locale 설정
-Settings.defaultLocale = "ko";
+window.defaultLocale = Settings.defaultLocale = 'ko'
 
-// CurrentWindow 사용
-const win = require("electron").remote.getCurrentWindow();
-const app = require("electron").remote.app;
-const enableMouse = function(e) {
-  win.setIgnoreMouseEvents(false);
-};
+const win = getCurrentWindow()
+const enableMouse = function() {
+    win.setIgnoreMouseEvents(false)
+}
 const disableMouse = function(e) {
-  if (e) {
-    const pos = e.currentTarget.getBoundingClientRect();
-    if (
-      e.clientX > pos.left &&
-      e.clientY > pos.top &&
-      e.clientX < pos.left + pos.width &&
-      e.clientY < pos.top + pos.height
-    )
-      return true;
-  }
-  win.setIgnoreMouseEvents(true, { forward: true });
-};
-Vue.use(Vuikit);
-Vue.use(VuikitIcons);
-Vue.use(VueBus);
-Vue.use(Datetime);
-Vue.directive("linkified", linkify);
+    if (e) {
+        const pos = e.currentTarget.getBoundingClientRect()
+        if ( e.clientX > pos.left && e.clientY > pos.top && e.clientX < pos.left + pos.width && e.clientY < pos.top + pos.height ) {
+            return true
+        }
+    }
+    win.setIgnoreMouseEvents(true, { forward: true })
+}
 
-Vue.http = Vue.prototype.$http = axios;
-Vue.config.productionTip = false;
-Vue.DevMode = Vue.prototype.DevMode = () =>
-  process.env.NODE_ENV === "development";
-Vue.setIgnore = Vue.prototype.setIgnore = enableMouse;
-Vue.disableIgnore = Vue.prototype.disableIgnore = disableMouse;
-window.appdata = Vue.appdata = Vue.prototype.appdata = app.getPath("userData");
-/* eslint-disable no-new */
-new Vue({
-  components: {
-    App
-  },
-  router,
-  render: h => h(App),
-  store,
-  template: "<App/>"
-}).$mount("#app");
+let Vue = createApp(App)
+Vue.component('DatePicker', Datepicker)
+Vue.use(Vue3linkify)
+
+Vue.config.globalProperties.$http = axios
+Vue.config.globalProperties.emitter = new Emitter()
+Vue.config.globalProperties.DevMode = () => { return process.env.NODE_ENV === "development" }
+Vue.config.globalProperties.setIgnore = enableMouse
+Vue.config.globalProperties.disableIgnore = disableMouse
+
+window.appdata = Vue.config.globalProperties.appdata = app.getPath('userData')
+window.appVersion = Vue.config.globalProperties.appVersion = app.getVersion()
+
+Vue.use(router)
+
+// using Vuex
+Vue.use(store)
+
+Vue.mount("#app")

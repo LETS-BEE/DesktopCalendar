@@ -1,5 +1,5 @@
 <template>
-  <div class="uk-margin-large-top uk-text-center">
+  <div class="uk-text-center">
     <span class="uk-text-lead">테마 선택 </span>
     <br />
     <span class="uk-text-meta"
@@ -17,7 +17,7 @@
               checked
               @click="setBlack"
             />
-            <label for="blackdesign">Black</label>
+            <label class="uk-margin-small-left" for="blackdesign">Black</label>
           </th>
           <th class="uk-text-center">
             <input
@@ -27,7 +27,7 @@
               id="whitedesign"
               @click="setWhite"
             />
-            <label for="whitedesign">White</label>
+            <label class="uk-margin-small-left" for="whitedesign">White</label>
           </th>
         </tr>
       </thead>
@@ -43,12 +43,10 @@
       </tbody>
     </table>
 
-    <vk-button
-      class="uk-position-medium uk-position-top-right"
-      type="primary"
-      size="small"
+    <button
+      class="uk-button uk-button-primary uk-button-small uk-position-medium uk-position-top-right"
       uk-slideshow-item="3"
-      >다음</vk-button
+      >다음</button
     >
   </div>
 </template>

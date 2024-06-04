@@ -6,7 +6,7 @@
       <input
         type="checkbox"
         class="uk-checkbox"
-        :value="autoStart"
+        v-model="autoStart"
         @change="changeMode"
       />
     </p>
@@ -21,21 +21,19 @@
         <option value="10800">3시간</option>
       </select>
     </p>
-    <vk-button
-      class="uk-position-medium uk-position-top-right"
-      type="primary"
-      size="small"
+    <button
+      class="uk-button uk-button-primary uk-button-small uk-position-medium uk-position-top-right"
       uk-slideshow-item="5"
-      >다음</vk-button
+      >다음</button
     >
   </div>
 </template>
 
 <script>
-import Launch from "auto-launch";
-const startup = new Launch({
-  name: "Desktop Calendar"
-});
+import * as remote from '@electron/remote'
+
+const app = remote.app
+
 export default {
   data() {
     return {
@@ -46,22 +44,29 @@ export default {
   methods: {
     changeMode(e) {
       if (e.target.checked) {
-        startup.enable();
+        app.setLoginItemSettings({
+          openAtLogin: true,
+          name: "Desktop Calendar"
+        })
       } else {
-        startup.disable();
+        app.setLoginItemSettings({
+          openAtLogin: false,
+          name: "Desktop Calendar"
+        })
       }
     },
     setTime(e) {
       this.$store.commit("setOptions", {
         key: "refreshTime",
         value: e.target.value
-      });
+      })
     }
   },
   mounted() {
-    startup.isEnabled().then(enabled => {
-      this.autoStart = enabled;
-    });
+    var temp = app.getLoginItemSettings().openAtLogin
+    if (process.platform == 'win32')
+      temp = app.getLoginItemSettings().executableWillLaunchAtLogin
+    this.autoStart = temp
   }
 };
 </script>

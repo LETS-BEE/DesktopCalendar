@@ -1,25 +1,25 @@
-import Vue from "vue";
-import Router from "vue-router";
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 
-Vue.use(Router);
+const router = createRouter({
+    base: process.env.BASE_URL,
+    history: process.env.IS_ELECTRON ? createWebHashHistory() : createWebHistory(),
+    routes: [
+        {
+            path: '/',
+            name: 'MainPage',
+            component: () => import('../views/MainPage.vue')
+        },
+        {
+            path: '/setting',
+            name: 'SettingPage',
+            component: () => import('../views/SettingPage.vue')
+        },
+        {
+            path: '/setup',
+            name: 'SetupPage',
+            component: () => import('../views/SetupPage.vue')
+        }
+    ]
+})
 
-export default new Router({
-  base: process.env.BASE_URL,
-  routes: [
-    {
-      path: "/",
-      name: "MainPage",
-      component: () => import("../views/Main.vue")
-    },
-    {
-      path: "/setting",
-      name: "SettingPage",
-      component: () => import("../views/Setting.vue")
-    },
-    {
-      path: "/setup",
-      name: "SetupPage",
-      component: () => import("../views/Setup.vue")
-    }
-  ]
-});
+export default router

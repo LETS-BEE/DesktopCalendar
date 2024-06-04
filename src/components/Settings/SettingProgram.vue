@@ -1,11 +1,11 @@
 <template>
   <div class="uk-padding-large uk-padding-remove-top">
-    <h2>프로그램 설정</h2>
-    시작 시 프로그램 실행
+    <h2>프로그램 세부 설정</h2>
+    시작 시 프로그램 자동 실행
     <input
       type="checkbox"
-      v-model="onstartup"
       class="uk-checkbox"
+      v-model="onstartup"
       @change="changeMode"
     />
     <p>
@@ -15,65 +15,85 @@
         v-model="setting.refreshTime"
         @change="setTime"
       >
-        <option value="60">1분</option>
-        <option value="300">5분</option>
-        <option value="600" selected="selected">10분</option>
-        <option value="1800">30분</option>
-        <option value="3600">1시간</option>
-        <option value="10800">3시간</option>
+        <option
+          v-for="item, index in refreshTimeList"
+          :key="index"
+          :value="item.key"
+        >{{ item.value }}</option>
       </select>
     </p>
     <p>
-      <vk-button type="danger" size="small" @click="restartApp"
-        >초기화</vk-button
+      <button class="uk-button uk-button-small uk-button-danger" @click="restartApp"
+        >초기화</button
       >
     </p>
   </div>
 </template>
 
 <script>
-import Launch from "auto-launch";
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 import fs from "fs";
-const start = new Launch({
-  name: "Desktop Calendar"
-});
+
+const app = remote.app
+
 export default {
   data() {
     return {
-      onstartup: false
+      onstartup: false,
+      refreshTimeList: [
+        { key: 60, value:  "1분"},
+        { key: 300, value:  "5분"},
+        { key: 600, value:  "10분"},
+        { key: 1800, value:  "30분"},
+        { key: 3600, value:  "1시간"},
+        { key: 5400, value:  "2시간"},
+      ]
     };
   },
   name: "setting-program",
   mounted() {
-    start.isEnabled().then(enabled => {
-      this.onstartup = enabled;
-    });
+    var temp = app.getLoginItemSettings().openAtLogin
+    if (process.platform == 'win32')
+      temp = app.getLoginItemSettings().executableWillLaunchAtLogin
+    this.onstartup = temp
   },
   methods: {
     changeMode(e) {
       if (e.target.checked) {
-        start.enable();
+        app.setLoginItemSettings({
+          openAtLogin: true,
+          name: "Desktop Calendar"
+        })
       } else {
-        start.disable();
+        app.setLoginItemSettings({
+          openAtLogin: false,
+          name: "Desktop Calendar"
+        })
       }
     },
     restartApp() {
       localStorage.clear();
       fs.unlink(this.appdata + "/calendar.json", e => {
-        if (e) console.log(e);
+        if (e)
+          console.log(e)
         fs.unlink(this.appdata + "/token.json", e => {
-          if (e) console.log(e);
-          remote.app.relaunch();
-          remote.app.exit(0);
+          if (e)
+            console.log(e)
+          remote.app.relaunch()
+          remote.app.exit(0)
         });
       });
     },
     setTime(e) {
-      this.setting.changeOption("refreshTime", e.target.value);
+      this.setting.changeOption("refreshTime", e.target.value)
     }
   },
-  props: ["setting"]
+  props: ["set"],
+  computed: {
+    setting() {
+      return this.set
+    }
+  }
 };
 </script>
 

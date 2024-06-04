@@ -6,15 +6,18 @@
 
 <script>
 // Use UIkit
-import UIkit from "uikit";
-import Icons from "uikit/dist/js/uikit-icons";
+import UIkit from 'uikit'
+import Icons from 'uikit/dist/js/uikit-icons'
 UIkit.use(Icons);
 export default {
-  name: "desktop-calendar",
+  name: 'desktop-calendar',
   mounted() {}
 };
 </script>
 
 <style>
 /* CSS */
+html {
+  background: none;
+}
 </style>

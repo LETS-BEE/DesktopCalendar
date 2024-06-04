@@ -1,30 +1,29 @@
 <template>
-  <vk-sticky>
-    <vk-card class="setting-header" type="default" padding="small">
+  <div class="uk-card uk-card-default" uk-sticky>
+    <div class="uk-card uk-card-small uk-card-default uk-padding-small setting-header" type="default" uk-grid>
       <img src="icon.png" alt="Desktop Calendar" id="main-icon" />
-      <span class="uk-h3"
+      <span class="uk-h3 uk-card-body"
         >Desktop Calendar 설정
-        <span class="uk-h4">{{ currentVersion }}</span></span
-      >
-    </vk-card>
-  </vk-sticky>
+        <span class="uk-h4">{{ currentVersion }}</span>
+      </span>
+    </div>
+  </div>
 </template>
 
 <script>
-import { remote } from "electron";
 export default {
+  name: "setting-header",
   data() {
     return {
-      currentVersion: remote.app.getVersion()
+      currentVersion: this.appVersion
     };
-  },
-  name: "setting-header"
+  }
 };
 </script>
 
 <style lang="scss">
 #main-icon {
-  width: 50px;
+  width: 100px;
 }
 .setting-header {
   box-shadow: none !important;

@@ -1,27 +1,22 @@
 <template>
-  <vk-card
-    class="uk-card-small"
+  <div
+    class="uk-card uk-card-default uk-padding-small"
     id="gcal-event"
-    :style="{
-      borderTopColor: event.color,
-      top: event.top + 'px',
-      left: event.left + 'px'
-    }"
+    style="min-width: 300px"
     @mouseover="setIgnore"
     @mouseout="disableIgnore"
   >
-    <div slot="header" style="padding: 0">
-      <vk-icon-link
+    <slot name="header" style="padding: 0">
+      <span
         id="open-google-calendar"
-        icon="google"
-        class="uk-position-top-right uk-padding-small uk-border-circle google-button"
-        v-vk-tooltip="'Google Calendar에서 엽니다.'"
+        uk-icon="google"
+        class="uk-icon-link uk-position-top-right uk-padding-small uk-border-circle google-button"
+        uk-tooltip="Google Calendar에서 엽니다."
         v-on:click="openGCal()"
       />
-      <vk-card-title
-        class="uk-margin-small-top gcal-title uk-margin-remove-bottom"
-        >{{ event.title }}</vk-card-title
-      >
+      <div
+        class="uk-card-title uk-margin-small-top gcal-title uk-margin-remove-bottom"
+        >{{ event.title }}</div>
       <p class="uk-text-meta uk-margin-remove-top">
         {{
           event.organizer
@@ -31,16 +26,16 @@
       </p>
       <p
         class="uk-text-meta uk-margin-remove timeShow"
-        v-vk-tooltip="'클릭으로 보기 변경'"
+        uk-tooltip="클릭으로 보기 변경"
         @click="timeShow = true"
         v-if="!timeShow"
       >
-        <vk-icon v-if="timePast" icon="history"></vk-icon>
-        <vk-icon v-else icon="future"></vk-icon>
-        <time>{{ getFromNow() }}</time>
+        <span v-if="timePast" uk-icon="history"></span>
+        <span v-else uk-icon="future"></span>
+        <time class="uk-margin-small-left">{{ getFromNow() }}</time>
       </p>
       <div
-        v-vk-tooltip="'클릭으로 보기 변경'"
+        uk-tooltip="클릭으로 보기 변경"
         v-if="timeShow"
         @click="timeShow = false"
       >
@@ -58,42 +53,56 @@
           >
         </p>
       </div>
-    </div>
-    <vk-icon-link
-      v-if="!isDelete"
-      icon="trash"
-      class="uk-float-right"
-      v-vk-tooltip="'이벤트 삭제'"
-      @click="deleteEvent"
-    ></vk-icon-link>
-    <vk-spinner v-else ratio="0.7" class="uk-float-right"></vk-spinner>
-    <div
-      v-if="deleteError"
-      class="uk-alert uk-alert-danger uk-padding-small"
-      uk-alert
-    >
-      <p>삭제에 실패하였습니다.</p>
-    </div>
-    <p class="gcal-body markdown-body" v-html="getDescription" v-linkified />
-  </vk-card>
+      <hr/>
+      <div
+        v-if="!isDelete" 
+        uk-icon="trash"
+        uk-tooltip="이벤트 삭제"
+        class="uk-icon-link uk-float-right"
+        @click="deleteEvent"/>
+
+      <div v-else uk-spinner='ratio: 0.7' class="uk-float-right"></div>
+      <div
+        v-if="deleteError" 
+        class="uk-alert-danger uk-padding-small"
+        uk-alert
+      >
+        <p>삭제에 실패하였습니다.</p>
+      </div>
+      <div
+        v-if="!isEdit" 
+        uk-icon="file-edit"
+        uk-tooltip="이벤트 수정"
+        class="uk-icon-link uk-float-right"
+        @click="editEvent"/>
+
+      <div v-else uk-spinner='ratio: 0.7' class="uk-float-right"/>
+    </slot>
+    <p class="gcal-body markdown-body" v-html="getDescription" v-linkify />
+  </div>
 </template>
 
 <script>
-import * as auth from "./api.js";
-import fs from "fs";
-import { shell } from "electron";
-const api = auth.default;
+import fs from 'fs'
+import { shell } from 'electron'
+import * as auth from "./api.js"
+
+const api = auth.default
+let accessCount = 0
+
 export default {
-  name: "event",
+  name: "calendar-event",
   data() {
     return {
       gcolor: null,
       timeShow: false,
       timePast: false,
       isDelete: false,
+      isEdit: false,
       deleteError: false,
+      editError: false,
       isUpdate: false,
-      refreshInterval: null
+      refreshInterval: null,
     };
   },
   methods: {
@@ -111,46 +120,68 @@ export default {
           organizer: e.organizer,
           description: e.description || null,
           created: e.created
-        };
-      });
-      this.Fcalendar.renderEvents(data);
+        }
+      })
+      this.Fcalendar.renderEvents(data)
     },
     openGCal() {
-      this.openExternal(this.event.e.htmlLink);
+      this.openExternal(this.event.e.htmlLink)
     },
     openExternal(link) {
-      shell.openExternal(link);
-      return false;
+      shell.openExternal(link)
+      return false
     },
     init() {
-      var colors = {};
-      api.setAxios(this.$http);
+      var colors = {}
+      api.setAxios(this.$http)
       api.authorize(key => {
-        this.$http.defaults.headers.common["Authorization"] = "Bearer " + key;
+        this.$http.defaults.headers.common["Authorization"] = "Bearer " + key
         api.colors(color => {
-          this.gcolor = color.data;
+          this.gcolor = color.data
           fs.readFile(this.appdata + "/calendar.json", (err, res) => {
-            if (err) return console.error(err);
-            const calendars = JSON.parse(res);
-            // console.log(calendars)
-            this.Fcalendar.removeEvents();
+            if (err)
+              return console.error(err)
+
+            const calendars = JSON.parse(res)
+            
+            this.Fcalendar.removeEvents()
+
+            accessCount += 1
+            var checkedCalendar = 0
+            var calNum = 0
+
             for (const cal of calendars) {
-              if (!cal.checked) continue;
-              // console.log(cal)
-              colors[cal.id] = this.gcolor.calendar[cal.colorId];
+              if (!cal.checked) {
+                continue
+              }
+              
+              checkedCalendar += 1
+              colors[cal.id] = this.gcolor.calendar[cal.colorId]
+
               api.events(
                 cal.id,
                 this.Fcalendar.view.start,
                 this.Fcalendar.view.end,
                 events => {
-                  if (!events) return 0;
-                  this.addEvent(events.data.items, colors[cal.id]);
+                  calNum += 1
+                  var lastPass = false
+                  
+                  if (checkedCalendar == calNum ) {
+                    if (accessCount >= 2)
+                      lastPass = true
+                    accessCount -= 1
+                  }
+
+                  if (accessCount >= 2 || lastPass)  return
+                  if (checkedCalendar == calNum ) this.emitter.emit("reloadEnd")
+
+                  if (events.data.items.length == 0) return
+                  this.addEvent(events.data.items, colors[cal.id])
                 }
-              );
+              )
             }
-            this.$bus.emit("reloadEnd");
-          });
-        });
+          })
+        })
       });
     },
     getFromNow() {
@@ -185,6 +216,25 @@ export default {
         }
       });
     },
+    deleteEditEvent(ev) {
+      this.isDelete = true;
+      api.deleteEvent(ev.organizer.email, ev.id, req => {
+        this.isDelete = false;
+        if (req && req.status === 204) {
+          this.$parent.show = false;
+          this.Fcalendar.removeEvents(ev.id);
+        } else {
+          this.deleteError = true;
+          setTimeout(() => {
+            this.deleteError = false;
+          }, 2000);
+        }
+      });
+    }
+    ,
+    editEvent() {
+      this.$parent.editEvent(this.event)
+    },
     insertEvent(calendarid, timeType, start, end, title, content, colorid, cb) {
       api.insertEvent(
         calendarid,
@@ -194,10 +244,12 @@ export default {
         title,
         content,
         colorid,
-        req => {
+        (req, err) => {
           if (req) {
             this.addEvent([req], { background: "#FFFFFF" });
-            cb(req);
+          }
+          if (err) {
+            cb(err);
           }
         }
       );
@@ -205,14 +257,17 @@ export default {
   },
   mounted() {
     this.init();
-    this.$bus.$on("loadURL", url => {
+    this.emitter.on("loadURL", url => {
       this.openExternal(url);
     });
-    this.refreshInterval = setInterval(this.init, this.getRefresh * 1000);
-    this.$bus.$on("forceReload", () => {
+    // setInterval for ms...
+    this.refreshInterval = setInterval(this.init, parseInt(this.getRefresh) * 1000);
+    this.emitter.on("forceReload", () => {
       this.init();
     });
-  },
+    const $ = window.$
+    $("#gcal-event").resize(this.boundsRect)
+  }, 
   computed: {
     getDescription() {
       return (
@@ -228,10 +283,40 @@ export default {
     getRefresh(oldValue, newValue) {
       if (oldValue !== newValue) {
         clearInterval(this.refreshInterval);
-        setInterval(this.init, newValue * 1000);
+        // setInterval for ms...
+        this.refreshInterval = setInterval(this.init, parseInt(newValue) * 1000);
         // console.log('refresh Interval')
       }
-    }
+    },
+  },
+  updated: function() {
+    this.$nextTick(() => {
+      const $ = window.$
+      var top = this.event.top
+      var left = this.event.left
+
+      if ($('#gcal-event').outerHeight() !== undefined)
+      { 
+        $('#gcal-event').css('border-top-color', this.event.color)
+        $('#gcal-event').css('border-bottom-color', 'white')
+        
+        if ($('#gcal-event').outerHeight() + top > window.outerHeight * 0.9) {
+          top = this.event.top - this.event.titleHeight - $('#gcal-event').outerHeight()
+          $('#gcal-event').css('border-top-color', 'white')
+          $('#gcal-event').css('border-bottom-color', this.event.color)
+        }
+      }
+
+      if ($('#gcal-event').outerWidth() !== undefined)
+      { 
+        if ($('#gcal-event').outerWidth() + this.event.left > this.event.calendarRight) {
+          left = this.event.right - $('#gcal-event').outerWidth()
+        }
+      }
+
+      $('#gcal-event').css('top', top)
+      $('#gcal-event').css('left', left)
+    })
   },
   props: ["Fcalendar", "event"]
 };
@@ -245,7 +330,8 @@ export default {
   max-width: 400px;
   top: 50px;
   z-index: 10;
-  border-top: 6px solid green;
+  border-top: 6px solid white;
+  border-bottom: 6px solid white;
 }
 .google-button:hover {
   background: lightgray;

@@ -1,10 +1,12 @@
 <template>
-  <vk-sticky>
-    <vk-card class="setting-header" type="default" padding="small">
-      <img src="icon.png" alt="Desktop Calendar" id="top-icon" />
-      <span class="uk-h3">Desktop Calendar</span>
-    </vk-card>
-  </vk-sticky>
+  <div uk-sticky>
+    <div class="uk-card uk-card-small uk-card-default uk-padding-small start-header" uk-grid>
+      <img src="icon.png" alt="Desktop Calendar" id="top-icon"/>
+      <div class="uk-card-body">
+        <h3 class="uk-card-title">Desktop Calendar</h3>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -15,9 +17,9 @@ export default {
 
 <style lang="scss">
 #top-icon {
-  width: 50px;
+  width: 100px;
 }
 .start-header {
-  box-shadow: none !important;
+  //box-shadow: none !important;
 }
 </style>

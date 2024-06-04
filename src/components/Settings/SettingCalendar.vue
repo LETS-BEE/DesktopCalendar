@@ -25,22 +25,22 @@
           </tr>
         </table>
       </p>
+      <h4>버튼 색 설정</h4>
       <p>
-        <h4>버튼 색 설정</h4>
-        <vk-button type="primary" size="small" @click="changeButton('primary')">파랑</vk-button>
-        <vk-button type="secondary" size="small" @click="changeButton('secondary')">검정</vk-button>
-        <vk-button type="danger" size="small" @click="changeButton('danger')">빨강</vk-button>
+        <button class="uk-button uk-button-small uk-button-primary" @click="changeButton('primary')">파랑</button>
+        <button class="uk-button uk-button-small uk-button-secondary" @click="changeButton('secondary')">검정</button>
+        <button class="uk-button uk-button-small uk-button-danger" @click="changeButton('danger')">빨강</button>
       </p>
     </span>
-      <vk-button type="primary" size="small" @click="deleteToken">
+      <button class="uk-button uk-button-small uk-button-primary" @click="deleteToken">
         다른 계정으로 로그인
-      </vk-button>
-      <div class="uk-width-1-1 uk-margin-top" v-if="calendarList.length">
-        <h4>사용할 달력 <vk-button type="primary" size="small" @click="saveCalendar">적용</vk-button></h4>
+      </button>
+      <div class="uk-width-1-1 uk-margin-top" v-if="calendarList.length != 0">
+        <h4>사용할 달력 <button class="uk-button uk-button-small uk-button-primary" @click="saveCalendar">적용</button></h4>
         <ul class="uk-list uk-list-divider uk-width-1-1 uk-text-left itemlist">
           <li v-for="(key) in calendarList" :key="key">
             <input type="checkbox" class="uk-checkbox" v-model="key.checked" :disabled="key.isprimary">
-            <span v-vk-tooltip="key.isprimary? '기본 달력입니다': null">{{key.summary}}</span>
+            <span  class="uk-margin-small-left" :uk-tooltip="[key.isprimary? '기본 달력입니다': null]">{{key.summary}}</span>
           </li>
         </ul>
       </div>
@@ -50,7 +50,7 @@
 
 <script>
 import fs from 'fs'
-import { Chrome } from 'vue-color'
+import { Chrome } from '@ckpack/vue-color'
 import api from './../Calendar/GoogleApi/api.js'
 
 export default {
@@ -90,7 +90,7 @@ export default {
     saveCalendar () {
       fs.writeFile(this.appdata + '/calendar.json', JSON.stringify(this.calendarList), (err) => {
         if (err) console.error(err)
-        this.parents.webContents.reload()
+        this.parents.reload()
       })
     },
     deleteToken () {
@@ -108,7 +108,7 @@ export default {
     save (key, value) {
       this.setting.changeOption(key, value)
     },
-    updateColor (e) {
+    updateColor () {
       this.save('calendar', this.setting.calendar)
     },
     changeButton (type) {
@@ -123,7 +123,15 @@ export default {
       this.save('calendarHeight', e.target.value)
     }
   },
-  props: ['setting', 'parents']
+  props: ['set', 'parent'],
+  computed: {
+    setting() {
+      return this.set
+    },
+    parents() {
+      return this.parent
+    }
+  }
 }
 </script>
 

@@ -1,0 +1,6 @@
+node_modules
+build
+index.html
+.github
+test.js
+.idea

@@ -3,30 +3,31 @@
 
 
 ## Stacks
-* [NodeJS](https://nodejs.org/) ver.16.16.0 LTS
-* [Electron-Vue](https://github.com/SimulatedGREG/electron-vue)
-* [Electron-Builder](https://github.com/electron-userland/electron-builder)
-* [Vuex](https://github.com/vuejs/vuex)
+* [NodeJS](https://nodejs.org/) ver.20 LTS
+* [Electron-Vite](https://electron-vite.github.io/)
+* [Vue3](https://vuejs.org/)[한국어](https://ko.vuejs.org/)
+* [Pinia](https://pinia.vuejs.org/)[한국어](https://pinia.vuejs.kr/)
 * [UIkit](https://getuikit.com/)
 * [Google Calendar API](https://developers.google.com/calendar/)
-* [FullCalendar v3](https://fullcalendar.io/docs/v3)
+* [google-auth-library](https://github.com/googleapis/google-auth-library-nodejs)
+* [FullCalendar-vue3](https://fullcalendar.io/docs/v6)
+* [Day.js](https://day.js.org)
 * [electron-disable-minimize](https://github.com/tbvjaos510/electron-disable-minimize)
 
 # Require Google API Key Authentication
 > 이 프로그램은 구글 인증키가 반드시 필요합니다.
 [구글 클라우드 콘솔](https://console.cloud.google.com) 에서 인증키를 발급받아주세요.  
-그 후 "./src/private/credentional.json" 파일을 생성한 후 아래와 같이 입력해주시기 바랍니다.  
+그 후 "./electron/private/credentional.json" 파일을 생성한 후 아래와 같이 입력해주시기 바랍니다.  
 ```json
 {
-    "installed":{
-        "client_id":"클라이언트 키",
-        "project_id":"프로젝트 ID",
-        "auth_uri":"https://accounts.google.com/o/oauth2/auth",
-        "token_uri":"https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs",
-        "client_secret":"클라이언트 인증키(Secret Key)",
-        "redirect_uris":["http://localhost"]
-    }
+   "client_id":"클라이언트 키",
+   "project_id":"프로젝트 ID",
+   "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+   "token_uri":"https://oauth2.googleapis.com/token",
+   "auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs",
+   "client_secret":"클라이언트 인증키(Secret Key)",
+   "redirect_uris":["http://localhost"]
+    
 }
 ```
 
@@ -40,7 +41,12 @@
 ***
 
 # ChangeLog
-## 3.0.6 (Lastest)
+## 3.1.0 (Lastest)
+* Node.js 버전을 16에서 20 LTS버전으로 변경
+* Electron-Vite 에 Vue3를 붙여서 전체 코드 재작성
+* 이제 Electron과 Vite가 IpcMain - IpcRenderer로 상호통신합니다.
+
+## 3.0.6
 * [fix] 이벤트 추가시 시작 및 종료 날짜 달력이 일요일부터 시작되도록 수정
 
 ## 3.0.5

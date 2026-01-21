@@ -57,7 +57,7 @@ function useAuthorize(parentWin:BrowserWindow, callback: (key?:any) => void) {
 // 로그인 된 계정 재인증
 async function useAsyncAuthorize(parentWin:BrowserWindow) {
     try {
-        var buf = fs.readFileSync(TOKEN_PATH)
+        var buf = await fs.promises.readFile(TOKEN_PATH)
         var token:Credentials
         if (buf) {
             token = JSON.parse(buf.toString()) as Credentials

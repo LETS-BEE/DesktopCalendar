@@ -44,6 +44,19 @@ let setWin: BrowserWindow | null
 let display: Display | null
 const store = new Store()
 
+const debounce = (func: Function, wait: number) => {
+	let timeout: NodeJS.Timeout
+	return function (this: any, ...args: any) {
+		const context = this
+		clearTimeout(timeout)
+		timeout = setTimeout(() => func.apply(context, args), wait)
+	}
+}
+
+const saveBounds = debounce((rect: Rectangle) => {
+	store.set('bounds', rect)
+}, 250)
+
 function createMainWindow() {
 	win = new BrowserWindow({
 		icon: path.join(process.env.VITE_PUBLIC, 'icon.png'),
@@ -172,7 +185,7 @@ function createMainWindow() {
 			}
 
 			win.setPosition(lastRect.x, lastRect.y)
-			store.set('bounds', lastRect)
+			saveBounds(lastRect)
 			// windowMoving = false
 		}
 	})

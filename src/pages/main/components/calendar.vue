@@ -18,7 +18,7 @@
                         달력
                         <select v-model="calPrimaryID" v-if="calendarids" class="uk-select uk-form-small">
                             <template v-for="(data) in calendarids">
-                            <option :key="data" v-if="data.accessRole == 'owner' || data.accessRole == 'writer'" :value="data.id">
+                            <option :key="data.id" v-if="data.accessRole == 'owner' || data.accessRole == 'writer'" :value="data.id">
                                 {{ data.summary }}
                             </option>
                             </template>
@@ -49,7 +49,7 @@
                             <DatePicker v-model='endTime' v-else :format="dptFormat" :preview-froma="dptFormat" :model-type="dptFormat" locale="ko-KR" input-class='uk-width' :is-24='false' week-start="0" auto-apply/>
                         </p>
                         <p class='uk-margin-small-top'>
-                            <template v-for="(color, i) in gcolor" v-bind:key="color" style="display:block">
+                            <template v-for="(color, i) in gcolor" v-bind:key="i" style="display:block">
                                 <div :style="{background : color.background}" class="event-color" :class="{eventcolorselect: colorid == i}" @click="colorid = i">
                                     <span v-if="colorid == i" ratio="1.3" uk-icon="check" class="icon-custom" />
                                 </div>

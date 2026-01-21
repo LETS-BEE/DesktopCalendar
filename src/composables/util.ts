@@ -234,8 +234,9 @@ export const useRequstReloadCalendar = () => {
     window.ipcRenderer.send('requstReloadCalendar')
 }
 export const useSetProgramSize = (width:number, height:number) => {
-    // TODO: value값 확인 후 처리
-    window.ipcRenderer.send("setWindowSize", width, height)
+    if (isFinite(width) && isFinite(height) && width > 0 && height > 0) {
+        window.ipcRenderer.send("setWindowSize", width, height)
+    }
 }
 
 export const useGetProgramSize = async () => {

@@ -50,6 +50,10 @@ ipcMain.handle('getCalendarEvents', async (_event, id, start, end) => {
     return await googleapi.useGetCalendarEvents(id, start, end)
 })
 
+ipcMain.handle('getBatchCalendarEvents', async (_event, ids, start, end) => {
+    return await googleapi.useGetBatchCalendarEvents(ids, start, end)
+})
+
 ipcMain.handle('justGoogleAuth', async (ev) => {
     var curwin = BrowserWindow.fromId(ev.frameId)
     if (curwin == null) {

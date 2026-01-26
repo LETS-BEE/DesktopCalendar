@@ -300,6 +300,32 @@ async function useGetCalendarEvents(id:string, start:string, end:string, ) {
     }
 }
 
+async function useGetBatchCalendarEvents(ids: string[], start: string, end: string) {
+    const results: Record<string, any> = {};
+    const BATCH_SIZE = 5;
+
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+        const chunk = ids.slice(i, i + BATCH_SIZE);
+        const promises = chunk.map(id =>
+            useGetCalendarEvents(id, start, end)
+                .then(events => ({ id, events }))
+                .catch(err => {
+                    console.error(`Error fetching calendar ${id}:`, err);
+                    return { id, events: null };
+                })
+        );
+
+        const chunkResults = await Promise.all(promises);
+        chunkResults.forEach(r => {
+            if (r.events) {
+                results[r.id] = r.events;
+            }
+        });
+    }
+
+    return results;
+}
+
 async function useDeleteCalendarEvent(email:string, id:string) {
     var req = null
     try {
@@ -357,6 +383,6 @@ async function useInsertCaledarEvent(calId:string, isDay:boolean, start:string, 
 export {
     useAuthorize, useAsyncAuthorize,
     useCalendarList, useAsyncCalendarList, useSaveCalendarList,
-    useGetCalendarColor, useGetCalendarEvents,
+    useGetCalendarColor, useGetCalendarEvents, useGetBatchCalendarEvents,
     useDeleteCalendarEvent, useInsertCaledarEvent
 }

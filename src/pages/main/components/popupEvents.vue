@@ -95,7 +95,7 @@ import {
     DesktopCalStore,
     useEnableMouse, useDisableMouse,
     useOpenExternalLink,
-    useGetCalColor, useGetCalendarEvents,
+    useGetCalColor, useGetBatchCalendarEvents,
     useInsertCaledarEvent, useDeleteCalendarEvent } from '../../../composables/util'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -202,46 +202,48 @@ export default {
                 this.removeAllEvents()
                 accessCount += 1
                 
-                var checkedCalendar = 0
-                var calNum = 0
-
+                const checkedIds: string[] = []
                 for (const cal of this.calendarids) {
                     if (!cal.checked) {
                         continue
                     }
-                    checkedCalendar += 1
+                    checkedIds.push(cal.id)
                     colors[cal.id] = this.gcolor.calendar[cal.colorId]
-                    
-                    useGetCalendarEvents(
-                        cal.id,
-                        this.calendarApi.view.activeStart.toString(),
-                        this.calendarApi.view.activeEnd.toString(),
-                        (events) => {
-                            calNum += 1
-                            var lastPass = false
-
-                            if (checkedCalendar == calNum) {
-                                if (accessCount >= 2) {
-                                    lastPass = true
-                                }
-                                accessCount -= 1
-                            }
-
-                            if (accessCount >= 2 || lastPass) {
-                                return
-                            }
-                            if (checkedCalendar == calNum ) {
-                                this.$emit("reloadEnd")
-                            }
-                            
-                            if (events == null || events.items.length == 0) {
-                                return
-                            }
-                            
-                            this.addEvent(events.items, colors[cal.id])
-                        }
-                    )
                 }
+
+                if (checkedIds.length === 0) {
+                    // No checked calendars
+                    if (accessCount >= 2) {
+                         accessCount -= 1
+                    }
+                    this.$emit("reloadEnd")
+                    return
+                }
+
+                console.time("fetchBatchEvents")
+                useGetBatchCalendarEvents(
+                    checkedIds,
+                    this.calendarApi.view.activeStart.toString(),
+                    this.calendarApi.view.activeEnd.toString(),
+                    (results) => {
+                        console.timeEnd("fetchBatchEvents")
+
+                        // Handle concurrency logic for reloadEnd
+                        if (accessCount >= 2) {
+                            accessCount -= 1
+                        } else {
+                            accessCount -= 1
+                            // If this callback runs, we have results
+                            // Iterate results
+                            for (const [calId, events] of Object.entries(results)) {
+                                if (events && events.items && events.items.length > 0) {
+                                    this.addEvent(events.items, colors[calId])
+                                }
+                            }
+                            this.$emit("reloadEnd")
+                        }
+                    }
+                )
             })
         },
         getFromNow() {

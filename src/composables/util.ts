@@ -199,6 +199,16 @@ export const useGetCalendarEvents = async (id:string, start:string, end:string, 
     })
 }
 
+export const useGetBatchCalendarEvents = async (ids: string[], start: string, end: string, callback: (results: Record<string, any>) => void) => {
+    start = dayjs(start).toISOString()
+    end = dayjs(end).toISOString()
+
+    window.ipcRenderer.invoke('getBatchCalendarEvents', ids, start, end)
+    .then((results) => {
+        callback(results)
+    })
+}
+
 export const useDeleteCalendarEvent = async (email:string, id:string, callback:(res:any) => void) => {
     window.ipcRenderer.invoke('deleteCalEvent', email, id)
     .then((req) => {

@@ -63,7 +63,7 @@ function createMomentFormatFunc(mom) {
 }
 
 function parseCmdStr(cmdStr) {
-    let parts = cmdStr.match(/^(.*?)\{(.*)\}(.*)$/); // TODO: lookbehinds for escape characters
+    let parts = cmdStr.match(/^(.*?)(?<!\\)\{(.*)(?<!\\)\}(.*)$/);
 
     if (parts) {
         let middle = parseCmdStr(parts[2]);

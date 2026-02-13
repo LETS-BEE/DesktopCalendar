@@ -161,7 +161,7 @@ async function refreshAsyncToken(client: OAuth2Client) {
     try {
         token = await client.refreshAccessToken()
 
-        return fileAsyncWrite(token.credentials)
+        return await fileAsyncWrite(token.credentials)
     } catch (err) {
         console.error("Error Refresh Token", err)
         return false
@@ -181,8 +181,8 @@ function fileWrite(token: Credentials, callback?: (key:any) => void ) {
     })
 }
 
-function fileAsyncWrite(token:Credentials) {
-    fs.writeFileSync(TOKEN_PATH, JSON.stringify(token))
+async function fileAsyncWrite(token:Credentials) {
+    await fs.promises.writeFile(TOKEN_PATH, JSON.stringify(token))
     APIKEY = token.access_token
     return true
 }

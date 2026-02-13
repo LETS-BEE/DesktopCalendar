@@ -179,12 +179,7 @@ export default {
             })
         },
         removeAllEvents() {
-            let events = this.calendarApi.getEvents()
-            if (events.length > 0) {
-                events.forEach((ev:any) => {
-                    ev.remove()
-                })
-            }
+            this.calendarApi.removeAllEvents()
         },
         init() {
             var colors:any = {}

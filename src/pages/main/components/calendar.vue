@@ -591,11 +591,20 @@ watch(timeType, (newValue) => {
     }
 })
 
-watch(store.$state, (newValue) => {
-    calendarApi.value?.changeView(newValue.options.calendarType)
-    setBorderColor(convertRGBA(newValue.options.calendar.color))
-    setBackgroudColor(convertRGBA(newValue.options.calendar.background))
-    buttonType.value = newValue.options.calendar.buttonType
+watch(() => store.options.calendarType, (newValue) => {
+    calendarApi.value?.changeView(newValue)
+})
+
+watch(() => store.options.calendar.color, (newValue) => {
+    setBorderColor(convertRGBA(newValue))
+}, { deep: true })
+
+watch(() => store.options.calendar.background, (newValue) => {
+    setBackgroudColor(convertRGBA(newValue))
+}, { deep: true })
+
+watch(() => store.options.calendar.buttonType, (newValue) => {
+    buttonType.value = newValue
 })
 
 </script>

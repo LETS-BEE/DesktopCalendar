@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div :style="calendarStyleVars">
         <div class="uk-inline uk-width-expand uk-flex-wrap-stretch calendar-head">
             <div class="uk-position-left uk-button-group calendar-head-left"> 
                 <button class='uk-button uk-button-small' :class="['uk-button-' + buttonType]" @click='reloadEvent' uk-tooltip="새로고침" id='reload-btn' @mouseover="useEnableMouse" @mouseout="useDisableMouse">새로고침</button>
@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, nextTick, inject } from 'vue'
+import { onMounted, ref, watch, nextTick, inject, computed } from 'vue'
 import { Calendar } from '@fullcalendar/core'
 import FullCalendar from '@fullcalendar/vue3'
 import koLocale from '@fullcalendar/core/locales/ko'
@@ -384,33 +384,12 @@ const deleteDayNumberToHangul = (daycellargs: DayCellMountArg) => {
 
 }
 
-const setBorderColor = (color:string) => {
-    // .fc-theme-standard .fc-scrollgrid,
-    // .fc-theme-standard td, .fc-theme-standard th
-    let elements = [
-        ...document.querySelectorAll(".fc-theme-standard .fc-scrollgrid"),
-        ...document.querySelectorAll(".fc-theme-standard td"),
-        ...document.querySelectorAll(".fc-theme-standard th")
-    ] as Array<HTMLElement>
-
-    elements.forEach((value) => {
-        value.style.borderColor = color
-    })
-}
-
-const setBackgroudColor = (color:string) => {
-    let elements = [
-        document.querySelector("#calendar"),
-        document.querySelector(".calendar-head"),
-    ] as Array<HTMLElement>
-    let rmBG = document.querySelector(".fc .fc-scrollgrid-section-sticky > *") as HTMLElement
-    if (rmBG) {
-        rmBG.style.backgroundColor = "#FFF0"
+const calendarStyleVars = computed(() => {
+    return {
+        '--calendar-border-color': convertRGBA(store.options.calendar.color),
+        '--calendar-bg-color': convertRGBA(store.options.calendar.background)
     }
-    elements.forEach((value) => {
-        value.style.backgroundColor = color
-    })
-}
+})
 
 const calendarOptions: CalendarOptions = {
     plugins: [
@@ -489,8 +468,6 @@ const calendarNext = () => {
     var date = calendarApi.value?.getDate()
     calendarMonth.value = dayjs(date).format(ymFormat)
     reloadEvent()
-    
-    setBorderColor(convertRGBA(store.getOptions('calendar').color))
 }
 
 const calendarToday = () => {
@@ -499,7 +476,6 @@ const calendarToday = () => {
     calendarMonth.value = dayjs(date).format(ymFormat)
 
     reloadEvent()
-    setBorderColor(convertRGBA(store.getOptions('calendar').color))
     // calendarApi.render()
 }
 
@@ -508,8 +484,6 @@ const calendarPrev = () => {
     var date = calendarApi.value?.getDate()
     calendarMonth.value = dayjs(date).format(ymFormat)
     reloadEvent()
-    
-    setBorderColor(convertRGBA(store.getOptions('calendar').color))
 }
 
 function showPopup(bIsShow:boolean) {
@@ -561,9 +535,6 @@ onMounted(async () => {
     await nextTick()
     calendarApi.value?.updateSize()
     calendarMonth.value = dayjs(calendarApi.value?.getDate()).format(ymFormat)
-
-    setBorderColor(convertRGBA(store.getOptions('calendar').color))
-    setBackgroudColor(convertRGBA(store.getOptions('calendar').background))
 })
 
 watch(startTime, (newValue) => {
@@ -594,14 +565,6 @@ watch(timeType, (newValue) => {
 watch(() => store.options.calendarType, (newValue) => {
     calendarApi.value?.changeView(newValue)
 })
-
-watch(() => store.options.calendar.color, (newValue) => {
-    setBorderColor(convertRGBA(newValue))
-}, { deep: true })
-
-watch(() => store.options.calendar.background, (newValue) => {
-    setBackgroudColor(convertRGBA(newValue))
-}, { deep: true })
 
 watch(() => store.options.calendar.buttonType, (newValue) => {
     buttonType.value = newValue
@@ -704,5 +667,20 @@ a.fc-col-header-cell-cushion {
 }
 .fc-scrollgrid {
    overflow-y: visible !important;
+}
+
+.fc-theme-standard .fc-scrollgrid,
+.fc-theme-standard td,
+.fc-theme-standard th {
+    border-color: var(--calendar-border-color) !important;
+}
+
+#calendar,
+.calendar-head {
+    background-color: var(--calendar-bg-color);
+}
+
+.fc .fc-scrollgrid-section-sticky > * {
+    background-color: transparent !important;
 }
 </style>

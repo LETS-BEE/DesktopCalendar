@@ -130,12 +130,12 @@ ipcMain.handle('getAppVersion', (_event) => {
  * 
 */
 
-ipcMain.on('deleteToken', (ev) => {
+ipcMain.on('deleteToken', async (ev) => {
     const tokenPath = path.join(app.getPath("userData"), 'token.json')
-    if (fs.existsSync(tokenPath)) {
-        try {
-            fs.unlinkSync(tokenPath)
-        } catch (err) {
+    try {
+        await fs.promises.unlink(tokenPath)
+    } catch (err) {
+        if ((err as any).code !== 'ENOENT') {
             console.error(err)
         }
     }

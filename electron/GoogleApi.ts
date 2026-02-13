@@ -235,7 +235,7 @@ function useSaveCalendarList(data:any) {
 
 async function useAsyncCalendarList(parentWin:BrowserWindow) {
     try {
-        var buf = fs.readFileSync(path.join(app.getPath('userData'), 'calendar.json'))
+        var buf = await fs.promises.readFile(path.join(app.getPath('userData'), 'calendar.json'))
         // console.log(buf.toString())
         if (buf.toString() == '') {
             return '[]'

@@ -18,10 +18,12 @@ const SCOPES = [
     "https://www.googleapis.com/auth/calendar.events"
 ];
 
+// @ts-ignore
+const clientConfig = credentials.installed || credentials
 const client = new OAuth2Client(
-    credentials.client_id,
-    credentials.client_secret,
-    credentials.redirect_uris[0]
+    clientConfig.client_id,
+    clientConfig.client_secret,
+    clientConfig.redirect_uris[0]
 )
 
 var APIKEY: string | null | undefined

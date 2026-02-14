@@ -41,7 +41,18 @@
 ***
 
 # ChangeLog
-## 3.1.0 (Lastest)
+## v3.1.1 (Lastest)
+* **시작 시 충돌 문제 해결:** `credentials.json` 속성에 대한 잘못된 접근으로 인해 `electron/GoogleApi.ts`에서 발생하는 런타임 충돌을 수정하여 `installed` 래퍼 구조와의 호환성을 보장했습니다.
+* **이스케이프된 중괄호 처리 방식 수정:** `src/plugin/fullcalendar-dayjs/index.js`에서 `parseCmdStr` 정규식을 업데이트하여 이스케이프된 중괄호(예: `\{`, `\}`)를 정확하게 파싱하도록 수정했습니다.
+* **창 크기 저장 최적화:** `'moved'` 이벤트 핸들러에 250ms 디바운스를 적용하여 `electron-store`에 대한 빈번한 동기 쓰기를 줄이고, 창 이동 중에 UI 끊김 현상과 높은 CPU 사용량을 제거했습니다.
+* **Google 캘린더 일괄 가져오기:** 순차적인 루프를 사용하여 캘린더 이벤트를 검색하는 방식을 `Promise.all`을 사용하여 단일 일괄 호출로 리팩터링했습니다. 이렇게 하면 높은 지연 시간 환경에서 25개의 캘린더에 대한 가져오기 시간이 약 5000ms에서 약 1000ms로 단축되었습니다.
+* **FullCalendar 이벤트 제거 최적화:** O(N) `ev.remove()` 호출을 단일 최적화된 `this.calendarApi.removeAllEvents()` 메서드로 대체하여 1000개의 이벤트에 대해 약 360배의 성능 향상을 이루었습니다.
+* **DOM 조작 대신 CSS 변수 사용:** 수천 개의 DOM 요소를 반복하는 대신 CSS 변수(`--calendar-border-color`, `--calendar-bg-color`)에 색상을 바인딩하여 캘린더 스타일을 리팩터링했습니다. 이 변경으로 스타일 업데이트 속도가 약 434배 빨라졌습니다.
+* **스토어 감시 로직 개선:** 전체 스토어 상태에 대한 단일, 깊이 있는 감시기를 특정 속성(예: `calendar.color`, `calendarType`)에 대한 4개의 집중된 watcher로 분할했습니다. 이렇게 하면 관련 없는 스토어 값이 변경될 때 불필요한 계산과 재렌더링을 방지합니다.
+* **차단 동기 I/O를 비동기 작업으로 대체:** 파일 작업에 대해 `GoogleApi.ts`에서 `fs.readFileSync`/`writeFileSync` 대신 `await fs.promises.readFile/writeFile`을 사용하여 토큰 읽기/쓰기 중에 메인 스레드의 차단을 제거했습니다.
+* **토큰 삭제 최적화:** `deleteToken` IPC 핸들러에서 동기 `fs.unlinkSync` 호출을 `await fs.promises.unlink`로 대체하여 차단하지 않는 파일 삭제를 보장하고 UI 응답성을 유지했습니다.
+
+## 3.1.0
 * Node.js 버전을 16에서 20 LTS버전으로 변경
 * Electron-Vite 에 Vue3를 붙여서 전체 코드 재작성
 * 이제 Electron과 Vite가 IpcMain - IpcRenderer로 상호통신합니다.

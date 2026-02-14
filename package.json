@@ -2,7 +2,7 @@
   "name": "desktop-calendar",
   "productName": "desktop-calendar",
   "private": true,
-  "version": "3.1.0",
+  "version": "3.1.1",
   "author": "LETBBI & tbvjaos510 <ghghdirk12@gmail.com, tbvjaos510@naver.com>",
   "description": "electron-vue으로 제작한 desktop calendar",
   "license": "MIT",

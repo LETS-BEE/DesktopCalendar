@@ -2,7 +2,7 @@
 // https://github.com/unjs/ofetch
 
 import { ofetch , FetchOptions } from 'ofetch'
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, dialog } from 'electron'
 
 import { OAuth2Client, Credentials } from 'google-auth-library'
 // let OAuth2Client = window.googleapi.OAuth2Client
@@ -11,6 +11,9 @@ import fs from 'fs'
 import path from 'path'
 
 import credentials from './private/credentials.json'
+
+import http from 'http'
+import { shell } from 'electron'
 
 const TOKEN_PATH = path.join(app.getPath("userData"), "token.json")
 const SCOPES = [
@@ -27,12 +30,11 @@ const client = new OAuth2Client(
 )
 
 var APIKEY: string | null | undefined
-let popupWin: BrowserWindow | null
 
-function useAuthorize(parentWin:BrowserWindow, callback: (key?:any) => void) {    
+function useAuthorize(callback: (key?:any) => void) {    
     fs.readFile(TOKEN_PATH, (err, buf) => {
         if (err || !buf) {
-            getAccessToken(client, parentWin, callback)
+            getAccessToken(client, callback)
             return
         }
 
@@ -57,7 +59,7 @@ function useAuthorize(parentWin:BrowserWindow, callback: (key?:any) => void) {
 }
 
 // 로그인 된 계정 재인증
-async function useAsyncAuthorize(parentWin:BrowserWindow) {
+async function useAsyncAuthorize() {
     try {
         var buf = await fs.promises.readFile(TOKEN_PATH)
         var token:Credentials
@@ -77,7 +79,7 @@ async function useAsyncAuthorize(parentWin:BrowserWindow) {
             
             return true
         } else {
-            getAccessToken(client, parentWin)
+            getAccessToken(client)
             return false
         }
     } catch(err) {
@@ -97,43 +99,42 @@ function getAPIKEY() {
     return APIKEY
 }
 
-function getAccessToken(client: OAuth2Client, parentWin:BrowserWindow, callback?: (key:any) => void) {
+function getAccessToken(client: OAuth2Client, callback?: (key:any) => void) {
     const authUrl = client.generateAuthUrl({
         access_type: "offline",
         scope: SCOPES
-    })
-    
-    if (popupWin == null || popupWin == undefined) {
-        popupWin = new BrowserWindow({
-            parent: parentWin,
-            modal: true,
-            height: 850,
-            transparent: false,
-            frame: true
-        })
+    });
 
-        popupWin.setIgnoreMouseEvents(false)
-        popupWin.setMenuBarVisibility(false)
-        popupWin.loadURL(authUrl)
-        popupWin.on("closed", () => {
-            popupWin = null
-        })
-        popupWin.webContents.on("will-redirect", (_event, url) => {
-            if (url.indexOf("http://localhost") == 0) {
-                var params = url.split('?')[1]
-                var searchParam = new URLSearchParams(params)
-                // console.log(searchParam)
-                const code = searchParam.get('code')
-                if (code == null) {
-                    var err = "createToken: code is null"
-                    console.error(err)
-                    return
+    // 1. 코드를 받을 임시 로컬 서버를 엽니다. (BrowserWindow 팝업 대신)
+    const server = http.createServer(async (req, res) => {
+        try {
+            if (req.url && req.url.startsWith('/')) {
+                const parsedUrl = new URL(req.url, `http://localhost`);
+                const code = parsedUrl.searchParams.get('code');
+
+                if (code) {
+                    // 사용자 브라우저에 보여줄 성공 메시지
+                    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                    res.end('<h1>로그인 성공!</h1><p>이 창을 닫고 앱으로 돌아가세요.</p>');
+                    
+                    server.close(); // 목적 달성 후 서버 닫기
+                    
+                    // 기존에 작성하셨던 토큰 생성 로직 호출
+                    createToken(client, code, callback);
+                } else {
+                    res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
+                    res.end('<h1>로그인 실패 또는 취소됨</h1>');
+                    server.close();
                 }
-                createToken(client, code, callback)
-                popupWin?.close()
             }
-        })
-    }
+        } catch (e) {
+            console.error(e);
+            server.close();
+        }
+    }).listen(80, () => {
+        // 2. 서버가 준비되면 사용자의 시스템 기본 브라우저를 엽니다.
+        shell.openExternal(authUrl);
+    });
 }
 
 function createToken(client: OAuth2Client, code:string, callback?: (key:any) => void) {
@@ -235,7 +236,7 @@ function useSaveCalendarList(data:any) {
     )
 }
 
-async function useAsyncCalendarList(parentWin:BrowserWindow) {
+async function useAsyncCalendarList() {
     try {
         var buf = await fs.promises.readFile(path.join(app.getPath('userData'), 'calendar.json'))
         // console.log(buf.toString())
@@ -247,7 +248,7 @@ async function useAsyncCalendarList(parentWin:BrowserWindow) {
     } catch (e) {
         console.error(e)
         try {
-            await useAsyncAuthorize(parentWin)
+            await useAsyncAuthorize()
             
             var data = await useAsyncRequestFetch(
                 "https://www.googleapis.com/calendar/v3/users/me/calendarList?showHidden=true"

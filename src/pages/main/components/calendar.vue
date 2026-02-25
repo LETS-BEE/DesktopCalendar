@@ -39,14 +39,14 @@
                             </select>
                             <br/>
                             시작
-                            <DatePicker v-model='startTime' v-if="timeType == '날짜'" :format="dpFormat" :preview-fromat="dpFormat" :model-type="dpFormat" locale="ko" input-class='uk-width color-input' :is-24='false' week-start="0" auto-apply/>
-                            <DatePicker v-model='startTime' v-else :format="dptFormat" :preview-froma="dptFormat" :model-type="dptFormat" locale="ko" input-class='uk-width color-input' :is-24='false' week-start="0" auto-apply/>
+                            <VueDatePicker v-model='startTime' v-if="timeType == '날짜'" :format="dpFormat" :preview-fromat="dpFormat" :model-type="dpFormat" locale="ko" input-class='uk-width color-input' :is-24='false' week-start="0" auto-apply/>
+                            <VueDatePicker v-model='startTime' v-else :format="dptFormat" :preview-froma="dptFormat" :model-type="dptFormat" locale="ko" input-class='uk-width color-input' :is-24='false' week-start="0" auto-apply/>
                             
                         </p>
                         <p class='uk-margin-small-top'>
                             종료
-                            <DatePicker v-model='endTime' v-if="timeType == '날짜'" :format="dpFormat" :preview-froma="dpFormat" :model-type="dpFormat" locale="ko-KR" input-class='uk-width' :is-24='false' week-start="0" auto-apply/>
-                            <DatePicker v-model='endTime' v-else :format="dptFormat" :preview-froma="dptFormat" :model-type="dptFormat" locale="ko-KR" input-class='uk-width' :is-24='false' week-start="0" auto-apply/>
+                            <VueDatePicker v-model='endTime' v-if="timeType == '날짜'" :format="dpFormat" :preview-froma="dpFormat" :model-type="dpFormat" locale="ko-KR" input-class='uk-width' :is-24='false' week-start="0" auto-apply/>
+                            <VueDatePicker v-model='endTime' v-else :format="dptFormat" :preview-froma="dptFormat" :model-type="dptFormat" locale="ko-KR" input-class='uk-width' :is-24='false' week-start="0" auto-apply/>
                         </p>
                         <p class='uk-margin-small-top'>
                             <template v-for="(color, i) in gcolor" v-bind:key="i" style="display:block">

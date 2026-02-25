@@ -215,14 +215,11 @@ export default {
                     return
                 }
 
-                console.time("fetchBatchEvents")
                 useGetBatchCalendarEvents(
                     checkedIds,
                     this.calendarApi.view.activeStart.toString(),
                     this.calendarApi.view.activeEnd.toString(),
                     (results) => {
-                        console.timeEnd("fetchBatchEvents")
-
                         // Handle concurrency logic for reloadEnd
                         if (accessCount >= 2) {
                             accessCount -= 1

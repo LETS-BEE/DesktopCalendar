@@ -10,7 +10,7 @@ import MainView from './pages/main/index.vue'
 import SettingsView from './pages/settings/index.vue'
 import SetupView from './pages/setup/index.vue'
 
-import Datepicker from '@vuepic/vue-datepicker'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 
 // pinia import ==> window id
@@ -42,7 +42,7 @@ const router = createRouter({
 })
 
 const app = createApp(App)
-app.component('DatePicker', Datepicker)
+app.component('VueDatePicker', VueDatePicker)
 app.use(router)
 app.use(pinia)
 

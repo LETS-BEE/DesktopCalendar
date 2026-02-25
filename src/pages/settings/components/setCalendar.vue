@@ -12,12 +12,14 @@
                 <input type="radio" v-model="calendarType" class="uk-radio" value="week" @change="changeView"> 3주 보기 <br>
                 <input type="radio" v-model="calendarType" class="uk-radio" value="month" @change="changeView"> 한달 보기
             </p>
-            <p>
-                <table>
+            <table>
+                <thead>
                     <tr class="uk-text-center">
                         <td><h6>캘린더 색 설정</h6></td>
                         <td><h6>배경 색 설정</h6></td>
                     </tr>
+                </thead>
+                <tbody>
                     <tr>
                         <td>
                             <Sketch v-model="borderColor" />
@@ -26,8 +28,8 @@
                             <Sketch v-model="backgroundColor" />
                         </td>
                     </tr>
-                </table>
-            </p>
+                </tbody>
+            </table>
             <h4>버튼 색 설정</h4>
             <p>
                 <button class="uk-button uk-button-small uk-button-primary" @click="changeButton('primary')">파랑</button>

@@ -20,8 +20,7 @@ ipcMain.on('disableMouse', (_event) => {
 })
 
 ipcMain.on('googleLoginAuth', (ev) => {
-    var curwin = BrowserWindow.fromId(ev.frameId) as BrowserWindow
-    googleapi.useAuthorize(curwin, (_event) => {
+    googleapi.useAuthorize((_event) => {
         ev.reply("isAuthed", true)
         googleapi.useCalendarList((res) => {
             let resCalList = res.items.map((item:any) => {
@@ -60,7 +59,7 @@ ipcMain.handle('justGoogleAuth', async (ev) => {
         return false
     }
 
-    return await googleapi.useAsyncAuthorize(curwin)
+    return await googleapi.useAsyncAuthorize()
 })
 
 ipcMain.on('setAutoStartProgram', (_event, data) => {
@@ -92,9 +91,8 @@ ipcMain.on('openExternalLink', (_event, data) => {
     shell.openExternal(data)
 })
 
-ipcMain.handle('getCalendarList', (ev) => {
-    var curwin = BrowserWindow.fromId(ev.frameId) as BrowserWindow
-    return googleapi.useAsyncCalendarList(curwin)
+ipcMain.handle('getCalendarList', (_event) => {
+    return googleapi.useAsyncCalendarList()
 })
 
 ipcMain.handle('deleteCalEvent', async (_event, email, id) => {
@@ -140,8 +138,7 @@ ipcMain.on('deleteToken', async (ev) => {
         }
     }
     
-    var curwin = BrowserWindow.fromId(ev.frameId) as BrowserWindow
-    googleapi.useAuthorize(curwin, (_event) => {
+    googleapi.useAuthorize((_event) => {
         googleapi.useCalendarList((res) => {
             let resCalList = res.items.map((item:any) => {
                 var obj = Object.assign({}, item)

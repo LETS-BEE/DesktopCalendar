@@ -39,14 +39,13 @@
                             </select>
                             <br/>
                             시작
-                            <VueDatePicker v-model='startTime' v-if="timeType == '날짜'" :format="dpFormat" :preview-fromat="dpFormat" :model-type="dpFormat" locale="ko" input-class='uk-width color-input' :is-24='false' week-start="0" auto-apply/>
-                            <VueDatePicker v-model='startTime' v-else :format="dptFormat" :preview-froma="dptFormat" :model-type="dptFormat" locale="ko" input-class='uk-width color-input' :is-24='false' week-start="0" auto-apply/>
-                            
+                            <VueDatePicker v-model='startTime' v-if="timeType == '날짜'" :formats="{ input: dpFormat, preview: dpFormat }" :model-type="dpFormat" :locale="ko" input-class='uk-width color-input' :time-config="{ is24: false }" week-start="0" auto-apply/>
+                            <VueDatePicker v-model='startTime' v-else :formats="{ input: dptFormat, preview: dptFormat }" :model-type="dptFormat" :locale="ko" input-class='uk-width color-input' :time-config="{ is24: false }" week-start="0" auto-apply/>
                         </p>
                         <p class='uk-margin-small-top'>
                             종료
-                            <VueDatePicker v-model='endTime' v-if="timeType == '날짜'" :format="dpFormat" :preview-froma="dpFormat" :model-type="dpFormat" locale="ko-KR" input-class='uk-width' :is-24='false' week-start="0" auto-apply/>
-                            <VueDatePicker v-model='endTime' v-else :format="dptFormat" :preview-froma="dptFormat" :model-type="dptFormat" locale="ko-KR" input-class='uk-width' :is-24='false' week-start="0" auto-apply/>
+                            <VueDatePicker v-model='endTime' v-if="timeType == '날짜'" :formats="{ input: dpFormat, preview: dpFormat }" :model-type="dpFormat" :locale="ko" input-class='uk-width' :time-config="{ is24: false }" week-start="0" auto-apply/>
+                            <VueDatePicker v-model='endTime' v-else :formats="{ input: dptFormat, preview: dptFormat }" :model-type="dptFormat" :locale="ko" input-class='uk-width' :time-config="{ is24: false }" week-start="0" auto-apply/>
                         </p>
                         <p class='uk-margin-small-top'>
                             <template v-for="(color, i) in gcolor" v-bind:key="i" style="display:block">
@@ -109,11 +108,12 @@ import {
     useSettingWindow
 } from '../../../composables/util'
 import popupEvent from './popupEvents.vue'
+import { ko } from 'date-fns/locale'
 
 import dayjs from 'dayjs'
 
 const mFormat = 'YYYY-MM-DD'
-const mtFormat = 'yyyy-MM-DD hh:mm A'
+const mtFormat = 'YYYY-MM-DD hh:mm A'
 const dpFormat = 'yyyy-MM-dd'
 const dptFormat = 'yyyy-MM-dd hh:mm aa'
 const ymFormat = 'YYYY년 M월'
@@ -130,7 +130,6 @@ let startTime = ref((new Date()).toString())
 let endTime = ref('')
 let colorid = ref(1)
 const buttonType = ref(store.getOptions("calendar").buttonType)
-// let calendarStoreType = ref()
 let showAdd = false
 
 const Fcalendar = ref<InstanceType<typeof FullCalendar>>()
@@ -139,7 +138,6 @@ const calendarMonth = ref("")
 const eventform = ref()
 
 const summary = ref("")
-// const description = ref("")
 const timeType = ref('날짜')
 
 const calendarids = ref()
@@ -223,8 +221,7 @@ function loadSetting() {
     }
 
     btn.setAttribute("disabled", "true")
-    // @ts-ignore
-    // console.log(btnDrag.style.webkitAppRegion)
+
     // @ts-ignore
     btnDrag.style.webkitAppRegion = "none"
     useSettingWindow()
@@ -270,7 +267,6 @@ function insertEvent() {
 }
 
 function convertRGBA(rgba:any) {
-    // console.log(rgba)
     return `rgba(${rgba.r}, ${rgba.g}, ${rgba.b}, ${rgba.a})`
 }
 
@@ -287,7 +283,7 @@ function editEvent(ev:any) {
     eventDrop.value?.show()
 
     summary.value = ev.title
-    // console.log(ev)
+
     if (ev.extendedProps.description != null) {
         descriptEditor.setMarkdown(ev.extendedProps.description)
     } else {
@@ -332,6 +328,9 @@ function insertEditEvent() {
 
 const addEventDate = (st?:string) => {
     if (st != undefined) {
+        if (timeType.value != '날짜') {
+            st = dayjs(st).format(mtFormat)
+        }
         startTime.value = st
         endTime.value = st
         isEdit.value = false
@@ -356,22 +355,11 @@ const addPlusBtn = (daycellargs: DayCellMountArg) => {
     })
     el.addEventListener('mouseenter', (_event) => {
         plusbtn.onclick = () => addEventDate(el.getAttribute('data-date') as string)
-        // el.appendChild(plusbtn)
         el.prepend(plusbtn)
     })
-    
-    // var daynumber = el.getElementsByClassName('fc-daygrid-day-number').item(0)
-    // if (daynumber) {
-    //     if (daynumber.textContent) {
-    //         daynumber.textContent = daynumber.textContent?.replace('일', '')
-    //     }
-    // }
 }
 
 const deleteDayNumberToHangul = (daycellargs: DayCellMountArg) => {
-    // var daynumber = document.createElement('p')
-    // daynumber.classList.add('fc-daygrid-day-number')
-    // daynumber.innerHTML = daycellargs.dayNumberText.replace("일", '')
     var text = daycellargs.dayNumberText
     
     if (text.includes('월')) {
@@ -398,16 +386,9 @@ const calendarOptions: CalendarOptions = {
     ],
     initialView: store.getOptions('calendarType'),
     headerToolbar: false,
-    // headerToolbar: {
-    //     left: '',
-    //     center: 'title',
-    //     right: ''
-    // },
     themeSystem: 'standard',
     locale: koLocale,
     height: "100%",
-    // contentHeight: "auto",
-    // expandRows: true,
     dayMaxEventRows: false,
     fixedWeekCount: false,
     views: {
@@ -426,7 +407,6 @@ const calendarOptions: CalendarOptions = {
             expandRows: false,
         }
     },
-    // dayHeaderFormat: {day: 'numeric'},
     dayCellDidMount: addPlusBtn,
     dayCellContent: deleteDayNumberToHangul,
     eventMouseEnter: (mouseinfo) => {
@@ -436,7 +416,6 @@ const calendarOptions: CalendarOptions = {
         useEnableMouse()
         const el = mouseinfo.el
         const calendarEl = Fcalendar.value?.$el as HTMLElement
-        // const jsevent = mouseinfo.jsEvent
         var bcr = el.getBoundingClientRect()
         
         var eventRect = {
@@ -455,12 +434,10 @@ const calendarOptions: CalendarOptions = {
         isShow.value = false
     },
     eventTimeFormat: { hour12: true, hour: '2-digit'},
-    // eventTimeFormat: 'AH:mm',
     eventDisplay: 'block',
     dayPopoverFormat: 'MM월 DD일 dddd',
     moreLinkText: '더보기',
     navLinks: false,
-    // navLinkDayClick: ''
 }
 
 const calendarNext = () => {
@@ -476,7 +453,6 @@ const calendarToday = () => {
     calendarMonth.value = dayjs(date).format(ymFormat)
 
     reloadEvent()
-    // calendarApi.render()
 }
 
 const calendarPrev = () => {
@@ -500,7 +476,6 @@ function popupEventmouseout() {
 
 onMounted(async () => {
     eventDrop.value = UIKit.drop(eventAddDrop.value as HTMLElement)
-    // calendarStoreOption.value = store.getOptions("calendar")
     calendarids.value = await useGetCalendarList()
     calendarids.value.forEach((value:any) => {
         if (value.primary) {
@@ -526,11 +501,6 @@ onMounted(async () => {
     }
 
     calendarApi.value = Fcalendar.value?.getApi()
-    // let cal = document.querySelector('#calendar') as HTMLElement
-    // console.log(cal.style.height)
-    // cal.onload = () => {
-    //     console.log(cal.style.height)
-    // }
     UIKit.heightViewport(document.querySelector('#calendar') as HTMLElement, { offsetTop: true })
     await nextTick()
     calendarApi.value?.updateSize()
@@ -577,8 +547,6 @@ watch(() => store.options.calendar.buttonType, (newValue) => {
     position: relative;
     padding: 0 0 0 0;
     background-clip: content-box;
-    /* height: auto;
-    min-height: 600px; */
 }
 
 #dragBtn {
@@ -603,15 +571,10 @@ watch(() => store.options.calendar.buttonType, (newValue) => {
 }
 
 .calendar-head-left {
-    /* position: absolute !important; */
-    /* top: 0%; */
     left: 0%;
 }
 
 .calendar-head-right {
-    /* @extend .calendar-head-left; */
-    /* position: absolute !important; */
-    /* top: 0%; */
     right: 0%;
 }
 
@@ -627,10 +590,6 @@ watch(() => store.options.calendar.buttonType, (newValue) => {
 .event-color:hover {
     box-shadow: 0 0 3px 1px #a8a8a8;
 }
-
-/* .colorhighlighted {
-    border: 1px black solid;
-} */
 
 .icon-custom {
     transform: translate(-12px, 7px);

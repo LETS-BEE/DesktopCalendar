@@ -47,14 +47,9 @@ app.use(router)
 app.use(pinia)
 
 app.mount('#app').$nextTick(() => {
-  // Use contextBridge
-  // window.ipcRenderer.on('main-process-message', (_event, message) => {
-  //   console.log(message)
-  // })
     const store = useDeskCalStore()
     app.provide('DeskCalStore', store)
     window.ipcRenderer.on('getSettingData', (_event, key, value) => {
-        // console.log(key, value)
         store.setOption(key, JSON.parse(value))
     })
 })

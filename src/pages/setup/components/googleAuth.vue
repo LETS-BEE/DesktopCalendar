@@ -21,7 +21,7 @@
                 </button>
             </p>
             <ul class="uk-list uk-list-divider uk-width-1-1 uk-text-left itemlist">
-                <li v-for="key in calendarList" :key="key">
+                <li v-for="key in calendarList" :key="key.id">
                     <input
                         type="checkbox"
                         class="uk-checkbox"
@@ -38,19 +38,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useGoogleAuth, useSaveCalendar } from '../../../composables/util';
+import { onBeforeUnmount, ref } from 'vue'
+import {
+    desktopApi,
+    type CalendarListEntry,
+    type Cleanup
+} from '../../../services/desktopApi'
 
 let isAuthed = ref<boolean>(false)
-let calendarList = ref<Array<any>>([])
+let calendarList = ref<CalendarListEntry[]>([])
+let stopAuthListeners: Cleanup | undefined
 
 function auth() {
-    useGoogleAuth(isAuthed, calendarList)
+    stopAuthListeners?.()
+    stopAuthListeners = desktopApi.loginGoogle({
+        onAuthChanged: (value) => {
+            isAuthed.value = value
+        },
+        onCalendarList: (value) => {
+            calendarList.value = value
+        }
+    })
 }
 
 function save() {
-    useSaveCalendar(calendarList)
+    desktopApi.saveCalendarList(calendarList.value)
 }
+
+onBeforeUnmount(() => {
+    stopAuthListeners?.()
+})
 
 </script>
 

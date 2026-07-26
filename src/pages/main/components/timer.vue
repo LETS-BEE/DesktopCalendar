@@ -17,13 +17,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, inject } from 'vue'
 import dayjs from 'dayjs'
-import { DesktopCalStore } from '../../../composables/util'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
 
 const store = inject("DeskCalStore") as DesktopCalStore
 
-let datenow = ref("")
-let interval:NodeJS.Timeout | undefined
-let timeStyle = ref<any>()
+const datenow = ref("")
+let interval: ReturnType<typeof setInterval> | undefined
+let startTimeout: ReturnType<typeof setTimeout> | undefined
+const timeStyle = ref<any>()
 timeStyle.value = store.getOptions('timerStyle')
 
 function time() {
@@ -32,12 +33,13 @@ function time() {
 
 onMounted(() => {
     time()
-    setTimeout(() => {
+    startTimeout = setTimeout(() => {
         interval = setInterval(time, 1000)
     }, 1000 - (new Date()).getMilliseconds())
 })
 
 onBeforeUnmount(() => {
+    clearTimeout(startTimeout)
     clearInterval(interval)
 })
 

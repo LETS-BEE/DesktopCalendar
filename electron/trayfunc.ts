@@ -10,7 +10,7 @@ import path from 'node:path'
 let tray: Tray | null = null
 
 export function openTray(win: BrowserWindow) {
-    const iconPath = path.join(process.env.VITE_PUBLIC, 'icon.png')
+    const iconPath = path.join(process.env.VITE_PUBLIC ?? '', 'icon.png')
     console.log(iconPath)
     tray = new Tray(iconPath)
     tray.setToolTip("Desktop Calendar")

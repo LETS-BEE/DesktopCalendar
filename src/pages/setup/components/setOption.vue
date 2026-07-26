@@ -35,13 +35,14 @@
   
 <script setup lang="ts">
 import { onMounted, ref, inject } from 'vue'
-import { useSetAutoStartProgram, useGetAutoStartProgram, DesktopCalStore } from '../../../composables/util'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
+import { desktopApi } from '../../../services/desktopApi'
 
 const autoStart = ref(false)
 const store = inject("DeskCalStore") as DesktopCalStore
 
 function changeMode() {
-    useSetAutoStartProgram(autoStart.value)
+    desktopApi.setAutoStartProgram(autoStart.value)
 }
 
 function setTime(e:any) {
@@ -52,9 +53,8 @@ function setTime(e:any) {
 }
 
 onMounted(async () => {
-    autoStart.value = await useGetAutoStartProgram()
+    autoStart.value = await desktopApi.getAutoStartProgram()
 })
 </script>
-  
+
 <style></style>
-  

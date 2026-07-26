@@ -15,33 +15,39 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, inject, watch } from 'vue'
+import { inject, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 // @ts-ignore
 import { Editor } from '@toast-ui/editor'
 // @ts-ignore
 // import Viewer from '@toast-ui/editor/viewer'
 import '@toast-ui/editor/dist/toastui-editor.css'
 import '@toast-ui/editor/dist/toastui-editor-viewer.css'
-import { useNoteMemoStore, useEnableMouse, useDisableMouse, DesktopCalStore, convertColor } from '../../../composables/util'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
+import { desktopApi } from '../../../services/desktopApi'
+import { convertColor } from '../../../shared/color'
+import {
+    disableMouse as useDisableMouse,
+    enableMouse as useEnableMouse
+} from '../../../features/window/mousePassthrough'
 
 // const store = new Store();
 
 const editor = ref()
 const viewer = ref()
 
-let editorValid = ref<Editor>()
-let viewerValid = ref()
+const editorValid = shallowRef<Editor>()
+const viewerValid = shallowRef<Editor>()
 
-var showEditor = ref(false)
+const showEditor = ref(false)
 
 const store = inject("DeskCalStore") as DesktopCalStore
 const styleElement = ref<HTMLElement>()
 const memoTitle = ref<HTMLElement>()
 
 onMounted(async () => {
-    var memoValue = await useNoteMemoStore()
+    const memoValue = await desktopApi.getNoteMemo()
     
-    editorValid = new Editor({
+    editorValid.value = new Editor({
         el: editor.value,
         height: '100%',
         //'wysiwyg', 'markdown' 택 1
@@ -77,20 +83,23 @@ onMounted(async () => {
 const enableEditor = () => {
     if (!showEditor.value) {
         showEditor.value = true
-        // @ts-ignore
-        editorValid.focus()
+        editorValid.value?.focus()
     }
 }
 
 const endEdit = () => {
     if (showEditor.value) {
         showEditor.value = false
-        // @ts-ignore
-        useNoteMemoStore(editorValid.getHTML())
-        // @ts-ignore
-        viewerValid.value.setMarkdown(editorValid.getHTML())
+        const html = editorValid.value?.getHTML() ?? ''
+        desktopApi.saveNoteMemo(html)
+        viewerValid.value?.setMarkdown(html)
     }
 }
+
+onBeforeUnmount(() => {
+    editorValid.value?.destroy()
+    viewerValid.value?.destroy()
+})
 
 watch(store.$state, (newValue) => {
     if (memoTitle.value) {

@@ -1,6 +1,6 @@
 {
   "name": "electron-disable-minimize",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "description": "Set a window at the not minimized include Show Desktop Button, [Window] + D",
   "gypfile": true,
   "keywords": [
@@ -12,19 +12,19 @@
   "types": "./types.d.ts",
   "license": "MIT",
   "scripts": {
-    "electron-rebuild": "./node_modules/.bin/electron-rebuild -f -w electron-disable-minimize",
-    "compile": "node-gyp rebuild & yarn @electron/rebuild",
+    "install": "node -e \"process.stdout.write('Native build deferred to Electron rebuild')\"",
+    "build": "node-gyp rebuild",
+    "rebuild:electron": "electron-rebuild -f -w electron-disable-minimize",
+    "compile": "node-gyp rebuild && electron-rebuild -f -w electron-disable-minimize",
     "test": "electron ./test.js"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/tbvjaos510/electron-disable-minimize"
   },
-  "dependencies": {
-    "nan": "latest"
-  },
   "devDependencies": {
-    "electron": "latest",
-    "@electron/rebuild": "latest"
+    "@electron/rebuild": "4.2.0",
+    "electron": "43.2.0",
+    "node-gyp": "13.0.1"
   }
 }

@@ -134,6 +134,12 @@ renderer는 Node.js API나 `ipcRenderer`에 직접 접근하지 않고 `contextB
 - N-API 기반 네이티브 모듈과 pnpm, ESLint, Vitest, Windows CI를 도입했습니다.
 - 창 크기 입력 정규화와 외부 HTTP(S) 링크 탐색 정책을 보완했습니다.
 
+### v3.1.2
+
+- Google OAuth 인증을 앱 내부 `BrowserWindow` 팝업에서 시스템 기본 브라우저 방식으로 변경했습니다.
+- 임시 로컬 HTTP 서버가 OAuth 콜백과 인증 코드를 수신하도록 개선했습니다.
+- 인증용 `BrowserWindow` 의존성을 제거하고 인증 완료 후 브라우저 창을 닫을 수 있도록 흐름을 단순화했습니다.
+
 ### v3.1.1
 * **시작 시 충돌 문제 해결:** `credentials.json` 속성에 대한 잘못된 접근으로 인해 `electron/GoogleApi.ts`에서 발생하는 런타임 충돌을 수정하여 `installed` 래퍼 구조와의 호환성을 보장했습니다.
 * **이스케이프된 중괄호 처리 방식 수정:** `src/plugin/fullcalendar-dayjs/index.js`에서 `parseCmdStr` 정규식을 업데이트하여 이스케이프된 중괄호(예: `\{`, `\}`)를 정확하게 파싱하도록 수정했습니다.

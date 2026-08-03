@@ -12,16 +12,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useGetAppVersion } from '../../../composables/util'
+import { desktopApi } from '../../../services/desktopApi'
 
 const currentVersion = ref("")
 
 onMounted(async () => {
-    currentVersion.value = await useGetAppVersion()
+    currentVersion.value = await desktopApi.getAppVersion()
 })
 
 </script>
-  
+
 <style>
 #main-icon {
     width: 100px;
@@ -31,4 +31,3 @@ onMounted(async () => {
     user-select: none;
 }
 </style>
-  

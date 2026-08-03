@@ -1,47 +1,146 @@
-# Desktop-Calendar
-> 이 프로젝트는 tbvjaos510의 [DesktopCalendar](https://github.com/tbvjaos510/DesktopCalendar)를 Clone하였습니다.
+# Desktop Calendar
 
+Google Calendar 일정과 메모, 타이머를 Windows 바탕화면에서 확인할 수 있는 Electron 애플리케이션입니다.
 
-## Stacks
-* [NodeJS](https://nodejs.org/) ver.20 LTS
-* [Electron-Vite](https://electron-vite.github.io/)
-* [Vue3](https://vuejs.org/)[한국어](https://ko.vuejs.org/)
-* [Pinia](https://pinia.vuejs.org/)[한국어](https://pinia.vuejs.kr/)
-* [UIkit](https://getuikit.com/)
-* [Google Calendar API](https://developers.google.com/calendar/)
-* [google-auth-library](https://github.com/googleapis/google-auth-library-nodejs)
-* [FullCalendar-vue3](https://fullcalendar.io/docs/v6)
-* [Day.js](https://day.js.org)
-* [electron-disable-minimize](https://github.com/tbvjaos510/electron-disable-minimize)
+> 이 프로젝트는 [tbvjaos510/DesktopCalendar](https://github.com/tbvjaos510/DesktopCalendar)를 기반으로 개발되었습니다.
 
-# Require Google API Key Authentication
-> 이 프로그램은 구글 인증키가 반드시 필요합니다.
-[구글 클라우드 콘솔](https://console.cloud.google.com) 에서 인증키를 발급받아주세요.  
-그 후 "./electron/private/credentional.json" 파일을 생성한 후 아래와 같이 입력해주시기 바랍니다.  
+![Desktop Calendar 검은색 테마](public/black.png)
+
+## 주요 기능
+
+- Google OAuth 2.0 로그인과 Google Calendar 일정 동기화
+- 캘린더별 표시 여부, 색상, 보기 범위와 새로고침 주기 설정
+- 일정 추가·삭제, 메모와 타이머 제공
+- 창 크기와 위치 저장, 다중 모니터와 Windows 자동 시작 지원
+- 바탕화면 고정 및 마우스 이벤트 통과
+- 밝은 테마와 어두운 테마 지원
+
+## 실행 환경
+
+| 항목 | 요구 사항 |
+| --- | --- |
+| 운영체제 | Windows x64 |
+| Node.js | 24 (`.node-version` 및 `package.json` 기준) |
+| 패키지 관리자 | pnpm 11.9.0, Corepack 사용 |
+| 네이티브 빌드 | Visual Studio C++ Build Tools |
+| 외부 서비스 | Google Calendar API와 데스크톱 OAuth 클라이언트 |
+
+`electron-disable-minimize`가 Windows 네이티브 API를 사용하므로 현재 개발과 CI는 Windows를 기준으로 합니다.
+
+## 설치 및 실행
+
+```powershell
+git clone https://github.com/LETS-BEE/DesktopCalendar.git
+cd DesktopCalendar
+corepack enable
+corepack pnpm install --frozen-lockfile
+pnpm native:rebuild
+pnpm dev
+```
+
+`pnpm-lock.yaml`은 개발 환경과 CI의 의존성 버전을 동일하게 유지하기 위해 저장소에서 추적합니다.
+
+## Google OAuth 설정
+
+이 애플리케이션을 실행하려면 Google OAuth 클라이언트 정보가 필요합니다.
+
+1. [Google Cloud Console](https://console.cloud.google.com/)에서 프로젝트를 생성합니다.
+2. Google Calendar API를 활성화하고 OAuth 동의 화면을 구성합니다.
+3. 애플리케이션 유형이 `데스크톱 앱`인 OAuth 클라이언트를 생성합니다.
+4. 발급받은 값을 `electron/private/credentials.json`에 아래 구조로 입력합니다.
+
 ```json
 {
-   "client_id":"클라이언트 키",
-   "project_id":"프로젝트 ID",
-   "auth_uri":"https://accounts.google.com/o/oauth2/auth",
-   "token_uri":"https://oauth2.googleapis.com/token",
-   "auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs",
-   "client_secret":"클라이언트 인증키(Secret Key)",
-   "redirect_uris":["http://localhost"]
-    
+  "installed": {
+    "client_id": "클라이언트 ID",
+    "project_id": "프로젝트 ID",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_secret": "클라이언트 보안 비밀번호",
+    "redirect_uris": ["http://localhost"]
+  }
 }
 ```
 
-# Program Images
-## White
-<img src="public/white.png" />
+실제 자격 증명은 공개 저장소에 커밋하지 마세요. 로그인 후 발급되는 토큰과 캘린더 목록은 Electron의 사용자 데이터 디렉터리에 저장됩니다.
 
-## Black
-<img src="public/black.png"/>
+## 주요 명령
 
-***
+| 명령 | 설명 |
+| --- | --- |
+| `pnpm dev` | 개발 모드로 애플리케이션 실행 |
+| `pnpm typecheck` | Vue와 TypeScript 타입 검사 |
+| `pnpm lint` | ESLint 검사 |
+| `pnpm test` | Vitest 테스트 실행 |
+| `pnpm build` | renderer, preload, main process 빌드 |
+| `pnpm native:rebuild` | 현재 Electron 버전에 맞춰 네이티브 모듈 재빌드 |
+| `pnpm native:smoke` | 네이티브 모듈 로드 확인 |
+| `pnpm package` | Windows 설치 프로그램 생성 |
+| `pnpm package:dir` | 설치 프로그램 없이 패키징 결과 생성 |
 
-# ChangeLog
-## v3.1.1 (Lastest)
+빌드와 패키징 결과는 각각 `dist`, `dist-electron`, `release`에 생성되며 Git에서 추적하지 않습니다.
+
+## 아키텍처
+
+```text
+electron/
+  ipc/                 IPC 핸들러와 입력 검증
+  persistence/         설정, 토큰, 캘린더 데이터 저장
+  services/google/     Google OAuth와 Calendar API
+  windows/             Electron 창 생성과 탐색 정책
+  preload.ts           타입이 지정된 renderer API
+shared/
+  ipc.ts               main, preload, renderer 공용 IPC 계약
+src/
+  features/            캘린더와 창 동작별 로직
+  services/            preload API를 사용하는 renderer 서비스
+  stores/              Pinia 상태 관리
+tests/                  IPC, 서비스, 스케줄러, 네이티브 모듈 테스트
+```
+
+renderer는 Node.js API나 `ipcRenderer`에 직접 접근하지 않고 `contextBridge`로 노출된 API만 사용합니다.
+
+## 기술 스택
+
+- Electron 43, Vite 8, TypeScript 6
+- Vue 3, Vue Router 5, Pinia 4
+- FullCalendar 7, Vue Datepicker 14, UIkit 3
+- Google Calendar API, google-auth-library
+- Vitest, Vue Test Utils, ESLint
+- N-API 기반 `electron-disable-minimize` 네이티브 모듈
+
+## 화면
+
+### 밝은 테마
+
+![밝은 테마](public/white.png)
+
+### 어두운 테마
+
+![어두운 테마](public/black.png)
+
+### 메모
+
+![메모](public/memo.png)
+
+## 변경 이력
+
+### v3.1.3 (최신)
+
+- Electron main process를 IPC, 데이터 저장, Google 서비스, 창 관리 모듈로 분리했습니다.
+- renderer의 직접 IPC 접근을 타입이 지정된 preload API로 교체했습니다.
+- Electron 43, Vite 8, FullCalendar 7, Pinia 4, TypeScript 6으로 업그레이드했습니다.
+- N-API 기반 네이티브 모듈과 pnpm, ESLint, Vitest, Windows CI를 도입했습니다.
+- 창 크기 입력 정규화와 외부 HTTP(S) 링크 탐색 정책을 보완했습니다.
+
+### v3.1.2
+
+- Google OAuth 인증을 앱 내부 `BrowserWindow` 팝업에서 시스템 기본 브라우저 방식으로 변경했습니다.
+- 임시 로컬 HTTP 서버가 OAuth 콜백과 인증 코드를 수신하도록 개선했습니다.
+- 인증용 `BrowserWindow` 의존성을 제거하고 인증 완료 후 브라우저 창을 닫을 수 있도록 흐름을 단순화했습니다.
+
+### v3.1.1
 * **시작 시 충돌 문제 해결:** `credentials.json` 속성에 대한 잘못된 접근으로 인해 `electron/GoogleApi.ts`에서 발생하는 런타임 충돌을 수정하여 `installed` 래퍼 구조와의 호환성을 보장했습니다.
 * **이스케이프된 중괄호 처리 방식 수정:** `src/plugin/fullcalendar-dayjs/index.js`에서 `parseCmdStr` 정규식을 업데이트하여 이스케이프된 중괄호(예: `\{`, `\}`)를 정확하게 파싱하도록 수정했습니다.
 * **창 크기 저장 최적화:** `'moved'` 이벤트 핸들러에 250ms 디바운스를 적용하여 `electron-store`에 대한 빈번한 동기 쓰기를 줄이고, 창 이동 중에 UI 끊김 현상과 높은 CPU 사용량을 제거했습니다.

@@ -15,7 +15,11 @@ import '@vuepic/vue-datepicker/dist/main.css'
 
 // pinia import ==> window id
 import { createPinia } from 'pinia'
-import { useDeskCalStore } from './composables/util'
+import {
+    useDeskCalStore,
+    type DesktopCalendarOptions
+} from './stores/desktopCalendar'
+import { desktopApi } from './services/desktopApi'
 
 const pinia = createPinia()
 
@@ -46,10 +50,12 @@ app.component('VueDatePicker', VueDatePicker)
 app.use(router)
 app.use(pinia)
 
-app.mount('#app').$nextTick(() => {
-    const store = useDeskCalStore()
-    app.provide('DeskCalStore', store)
-    window.ipcRenderer.on('getSettingData', (_event, key, value) => {
-        store.setOption(key, JSON.parse(value))
-    })
+const store = useDeskCalStore(pinia)
+app.provide('DeskCalStore', store)
+desktopApi.onSettingData((key, value) => {
+    store.setOption(
+        key as keyof DesktopCalendarOptions,
+        JSON.parse(value)
+    )
 })
+app.mount('#app')

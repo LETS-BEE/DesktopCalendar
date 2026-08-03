@@ -44,7 +44,7 @@
         <div class="uk-width-1-1 uk-margin-top" v-if="calendarList.length > 0">
             <h4>사용할 달력 <button class="uk-button uk-button-small uk-button-primary" @click="saveCalendar">적용</button></h4>
             <ul class="uk-list uk-list-divider uk-width-1-1 uk-text-left itemlist">
-                <li v-for="(key) in calendarList" :key="key">
+                <li v-for="(key) in calendarList" :key="key.id">
                     <input type="checkbox" class="uk-checkbox" v-model="key.checked" :disabled="key.isprimary">
                     <span  class="uk-margin-small-left" :uk-tooltip="[key.isprimary? '기본 달력입니다': null]">{{key.summary}}</span>
                 </li>
@@ -58,24 +58,17 @@
 </template>
   
 <script setup lang="ts">
-import { ref, inject, onMounted, watch, nextTick } from 'vue'
+import { ref, inject, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { Sketch } from '@ckpack/vue-color'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
 import {
-    DesktopCalStore,
-    useSendMainSettingData,
-    useRequstReloadCalendar,
-    useGetCalendarList, useSaveCalendar,
-    useDeleteToken,
-    useSetProgramSize, useGetProgramSize,
-    convertColor
- } from '../../../composables/util'
+    desktopApi,
+    type CalendarListEntry,
+    type Cleanup
+} from '../../../services/desktopApi'
+import { convertColor } from '../../../shared/color'
 
 const store = inject("DeskCalStore") as DesktopCalStore
-
-interface pgSize {
-    window: Array<number>,
-    displayArea: Array<number>
-}
 
 const calendarWidth = ref(1024)
 const calendarHeight = ref(903)
@@ -98,7 +91,7 @@ interface caltype {
     buttonType: string
 }
 
-const calendarList = ref<Array<any>>([])
+const calendarList = ref<CalendarListEntry[]>([])
 const calendarType = ref("month")
 const borderColor = ref<any>("")
 const backgroundColor = ref<any>("")
@@ -122,25 +115,25 @@ function updateWindowSize() {
     if (576 <= calendarHeight.value && calendarHeight.value <= calendarMaxSize.value[1]) {
         if (1024 <= calendarWidth.value && calendarWidth.value <= calendarMaxSize.value[0]) {
             // console.log(calendarWidth.value, calendarHeight.value)
-            useSetProgramSize(calendarWidth.value, calendarHeight.value)
+            desktopApi.setProgramSize(calendarWidth.value, calendarHeight.value)
         }
     }
 }
 
 function saveCalendar() {
-    useSaveCalendar(calendarList)
-    useRequstReloadCalendar()
+    desktopApi.saveCalendarList(calendarList.value)
+    desktopApi.requestReloadCalendar()
 }
 
 function deleteToken() {
     calendarList.value = []
-    useSaveCalendar(calendarList)
-    useDeleteToken(calendarList)
+    desktopApi.saveCalendarList(calendarList.value)
+    desktopApi.deleteToken()
 }
 
 function save (key:string, value:any) {
     // console.log(key, value)
-    useSendMainSettingData(key, value)
+    desktopApi.sendMainSettingData(key, value)
 }
 
 function updateCalendarColor() {
@@ -159,8 +152,13 @@ function changeView() {
     save('calendarType', calendarType.value)
 }
 
+let stopCalendarListReset: Cleanup | undefined
+
 onMounted(async () => {
-    calendarList.value = await useGetCalendarList()
+    stopCalendarListReset = desktopApi.onCalendarListReset((value) => {
+        calendarList.value = value
+    })
+    calendarList.value = await desktopApi.getCalendarList()
     calendarStyle.value = store.getOptions("calendar")
     borderColor.value = convertColor("hex", calendarStyle.value.color)
     backgroundColor.value = convertColor("hex", calendarStyle.value.background)
@@ -168,7 +166,7 @@ onMounted(async () => {
     calendarType.value = store.getOptions("calendarType")
 
     // electronSizeList.value = await useGetElectronSizeList()
-    var pgsize = (await useGetProgramSize()) as pgSize
+    var pgsize = await desktopApi.getProgramSize()
     // max 크기 지정 후 vue반영을 기다려야 v-model값이 적용됨 ==> await nextTick()으로 임시 해결
     // console.log(calendarMaxSize.value)
     calendarMaxSize.value = pgsize.displayArea
@@ -178,6 +176,10 @@ onMounted(async () => {
     calendarHeight.value = pgsize.window[1]
     // calendarWidth.value = pgsize.window[0]
     // calendarHeight.value = pgsize.window[1]
+})
+
+onBeforeUnmount(() => {
+    stopCalendarListReset?.()
 })
 
 watch(calendarWidth, (_newValue) => {
@@ -205,11 +207,10 @@ watch(backgroundColor, (newValue) => {
 })
 
 </script>
-  
+
 <style>
 .itemlist {
     height: 300px;
     overflow: auto;
 }
 </style>
-  

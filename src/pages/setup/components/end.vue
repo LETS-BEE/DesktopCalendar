@@ -17,12 +17,11 @@
 </template>
   
 <script setup lang="ts">
-import { useSettingEnd } from '../../../composables/util'
+import { desktopApi } from '../../../services/desktopApi'
 
 function start() {
-    useSettingEnd()
+    desktopApi.finishSettings()
 }
 </script>
-  
+
 <style></style>
-  

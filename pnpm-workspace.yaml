@@ -1,0 +1,11 @@
+packages:
+  - electron-disable-minimize
+
+allowBuilds:
+  electron: true
+  # Rebuilt explicitly against Electron headers by `pnpm native:rebuild`.
+  electron-disable-minimize: false
+  electron-winstaller: true
+  esbuild: true
+  vue-demi: true
+verifyDepsBeforeRun: false

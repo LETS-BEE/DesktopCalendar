@@ -52,7 +52,7 @@
   
 <script setup lang="ts">
 import { onMounted, ref, watch, inject } from 'vue'
-import { DesktopCalStore } from '../../../composables/util'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
 
 const types = ref("")
 const store = inject("DeskCalStore") as DesktopCalStore

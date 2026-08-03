@@ -1,6 +1,7 @@
 import {
   BrowserWindow,
   screen,
+  shell,
   type Display,
   type Rectangle,
 } from 'electron'
@@ -13,6 +14,7 @@ import {
   saveBounds,
 } from '../persistence/app-data'
 import { openTray } from '../trayfunc'
+import { parseExternalWebUrl } from './navigation'
 
 interface WindowManagerOptions {
   preloadPath: string
@@ -240,12 +242,25 @@ export class WindowManager {
   }
 
   private lockNavigation(window: BrowserWindow) {
-    window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+    window.webContents.setWindowOpenHandler(({ url }) => {
+      this.openExternalWebUrl(url)
+      return { action: 'deny' }
+    })
     window.webContents.on('will-navigate', (event, url) => {
       if (!this.isApplicationUrl(url)) {
         event.preventDefault()
+        this.openExternalWebUrl(url)
       }
     })
+  }
+
+  private openExternalWebUrl(value: string) {
+    const url = parseExternalWebUrl(value)
+    if (!url) {
+      return
+    }
+    void shell.openExternal(url)
+      .catch((error) => console.error('Unable to open external URL', error))
   }
 
   private isApplicationUrl(url: string) {

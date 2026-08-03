@@ -164,9 +164,20 @@ export const desktopApi = {
         window.desktopCalendar.app.requestCalendarReload()
     },
 
-    setProgramSize(width: number, height: number) {
-        if (isFinite(width) && isFinite(height) && width > 0 && height > 0) {
-            window.desktopCalendar.window.setSize({ width, height })
+    setProgramSize(width: number | string, height: number | string) {
+        const normalizedWidth = Number(width)
+        const normalizedHeight = Number(height)
+
+        if (
+            Number.isFinite(normalizedWidth)
+            && Number.isFinite(normalizedHeight)
+            && normalizedWidth > 0
+            && normalizedHeight > 0
+        ) {
+            window.desktopCalendar.window.setSize({
+                width: normalizedWidth,
+                height: normalizedHeight
+            })
         }
     },
 

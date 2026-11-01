@@ -126,13 +126,19 @@ renderer는 Node.js API나 `ipcRenderer`에 직접 접근하지 않고 `contextB
 
 ## 변경 이력
 
-### v3.1.3 (최신)
+### v3.2.0 (최신)
 
 - Electron main process를 IPC, 데이터 저장, Google 서비스, 창 관리 모듈로 분리했습니다.
 - renderer의 직접 IPC 접근을 타입이 지정된 preload API로 교체했습니다.
 - Electron 43, Vite 8, FullCalendar 7, Pinia 4, TypeScript 6으로 업그레이드했습니다.
 - N-API 기반 네이티브 모듈과 pnpm, ESLint, Vitest, Windows CI를 도입했습니다.
 - 창 크기 입력 정규화와 외부 HTTP(S) 링크 탐색 정책을 보완했습니다.
+- 리뷰 피드백으로 미사용 `GoogleApi` 호환 퍼사드를 제거하고 2026-11 기준 의존성(마이너/패치)을 갱신했습니다.
+
+### v3.1.3
+
+- Electron 40.7, electron-builder 26.8.2 등 패키지 버전을 업데이트했습니다.
+- `calendar.vue`의 VueDatePicker 사용 방식을 리팩터링했습니다.
 
 ### v3.1.2
 

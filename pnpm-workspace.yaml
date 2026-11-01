@@ -1,6 +1,11 @@
 packages:
   - electron-disable-minimize
 
+overrides:
+  # @toast-ui/editor (unmaintained) pins dompurify@2.x which has open advisories;
+  # force the patched 3.x line whose sanitize() API it uses is compatible.
+  dompurify: ^3.4.17
+
 allowBuilds:
   electron: true
   # Rebuilt explicitly against Electron headers by `pnpm native:rebuild`.
@@ -9,3 +14,5 @@ allowBuilds:
   esbuild: true
   vue-demi: true
 verifyDepsBeforeRun: false
+minimumReleaseAgeExclude:
+  - globals@17.14.0

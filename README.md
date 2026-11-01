@@ -103,7 +103,7 @@ renderer는 Node.js API나 `ipcRenderer`에 직접 접근하지 않고 `contextB
 
 ## 기술 스택
 
-- Electron 43, Vite 8, TypeScript 6
+- Electron 45, Vite 8, TypeScript 6
 - Vue 3, Vue Router 5, Pinia 4
 - FullCalendar 7, Vue Datepicker 14, UIkit 3
 - Google Calendar API, google-auth-library
@@ -130,10 +130,11 @@ renderer는 Node.js API나 `ipcRenderer`에 직접 접근하지 않고 `contextB
 
 - Electron main process를 IPC, 데이터 저장, Google 서비스, 창 관리 모듈로 분리했습니다.
 - renderer의 직접 IPC 접근을 타입이 지정된 preload API로 교체했습니다.
-- Electron 43, Vite 8, FullCalendar 7, Pinia 4, TypeScript 6으로 업그레이드했습니다.
+- Electron 45, Vite 8, FullCalendar 7, Pinia 4, Vitest 5, TypeScript 6으로 업그레이드했습니다.
 - N-API 기반 네이티브 모듈과 pnpm, ESLint, Vitest, Windows CI를 도입했습니다.
 - 창 크기 입력 정규화와 외부 HTTP(S) 링크 탐색 정책을 보완했습니다.
 - 리뷰 피드백으로 미사용 `GoogleApi` 호환 퍼사드를 제거하고 2026-11 기준 의존성(마이너/패치)을 갱신했습니다.
+- 유지보수가 중단된 `@toast-ui/editor`의 `dompurify`를 override로 3.4.17 패치 버전으로 고정하고 `happy-dom` 21 보안 패치를 반영했습니다.
 
 ### v3.1.3
 

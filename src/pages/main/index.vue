@@ -17,10 +17,10 @@ import Calendar from './components/calendar.vue'
 import NoteMemo from './components/memo.vue'
 
 import { onMounted } from 'vue'
-import { useEnableMouse, useDisableMouse } from '../../composables/util'
+import { desktopApi } from '../../services/desktopApi'
 
 onMounted(() => {
-  useEnableMouse()
-  useDisableMouse()
+  desktopApi.enableMouse()
+  desktopApi.disableMouse()
 })
 </script>

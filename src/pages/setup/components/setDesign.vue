@@ -58,7 +58,7 @@
   
 <script setup lang="ts">
 import { onMounted, inject } from 'vue'
-import { DesktopCalStore } from '../../../composables/util'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
 
 const store = inject("DeskCalStore") as DesktopCalStore
 
@@ -128,6 +128,5 @@ function setWhite() {
 
 onMounted(() => {
     setBlack()
-}) 
+})
 </script>
-  

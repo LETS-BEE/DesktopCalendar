@@ -32,11 +32,8 @@
   
 <script setup lang="ts">
 import { ref, inject, onMounted } from 'vue'
-import {
-    DesktopCalStore,
-    useSetAutoStartProgram, useGetAutoStartProgram,
-    useRestartApp
-} from '../../../composables/util'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
+import { desktopApi } from '../../../services/desktopApi'
 
 const store = inject("DeskCalStore") as DesktopCalStore
 const onstartup = ref(false)
@@ -51,21 +48,21 @@ const refreshTimeList = ref([
 ])
 
 onMounted(async () => {
-    onstartup.value =  await useGetAutoStartProgram()
-    refreshTime.value = store.getOptions("refreshTime")
+    onstartup.value = await desktopApi.getAutoStartProgram()
+    refreshTime.value = Number(store.getOptions("refreshTime"))
 })
 
 function changeMode() {
     if (onstartup.value) {
-        useSetAutoStartProgram(true)
+        desktopApi.setAutoStartProgram(true)
     } else {
-        useSetAutoStartProgram(false)
+        desktopApi.setAutoStartProgram(false)
     }
 }
 
 function restartApp() {
     localStorage.clear()
-    useRestartApp()
+    desktopApi.restartApp()
 }
 
 function setTime() {

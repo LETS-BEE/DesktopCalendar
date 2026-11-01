@@ -25,12 +25,12 @@
                         </select>
                         제목
                         <input type='text' placeholder='제목 입력' class='uk-input' v-model='summary'>
-                        <p class='uk-margin-small-top'>
+                        <div class='uk-margin-small-top'>
                             설명
                             <div ref="description" />
                             <!-- <textarea class='uk-textarea uk-height-small uk-resize-vertical uk-height-max-medium' v-model='description'/> -->
                             <!-- <a class="uk-text-muted uk-float-right uk-text-small" @click="useOpenExternalLink('https://gist.github.com/ihoneymon/652be052a0727ad59601#2-%EB%A7%88%ED%81%AC%EB%8B%A4%EC%9A%B4-%EC%82%AC%EC%9A%A9%EB%B2%95%EB%AC%B8%EB%B2%95')">Markdown 형식</a> -->
-                        </p>
+                        </div>
                         <p class='uk-margin-small-top'>
                             시간 종류
                             <select class="uk-select uk-width-1-3 uk-form-small" v-model="timeType">
@@ -48,7 +48,7 @@
                             <VueDatePicker v-model='endTime' v-else :formats="{ input: dptFormat, preview: dptFormat }" :model-type="dptFormat" :locale="ko" input-class='uk-width' :time-config="{ is24: false }" week-start="0" auto-apply/>
                         </p>
                         <p class='uk-margin-small-top'>
-                            <template v-for="(color, i) in gcolor" v-bind:key="i" style="display:block">
+                            <template v-for="(color, i) in gcolor" v-bind:key="i">
                                 <div :style="{background : color.background}" class="event-color" :class="{eventcolorselect: colorid == i}" @click="colorid = i">
                                     <span v-if="colorid == i" ratio="1.3" uk-icon="check" class="icon-custom" />
                                 </div>
@@ -90,33 +90,58 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, nextTick, inject, computed } from 'vue'
-import { Calendar } from '@fullcalendar/core'
-import FullCalendar from '@fullcalendar/vue3'
-import koLocale from '@fullcalendar/core/locales/ko'
-import dayGridPlugin from '@fullcalendar/daygrid'
-import { CalendarOptions, DayCellMountArg } from '@fullcalendar/core'
-import calendarDayjsMoment from '../../../plugin/fullcalendar-dayjs'
+import {
+    onBeforeUnmount,
+    onMounted,
+    reactive,
+    ref,
+    toRefs,
+    watch,
+    inject,
+    computed
+} from 'vue'
+import FullCalendar, {
+    type CalendarApi,
+    type CalendarOptions,
+    type DayCellInfo,
+    type MountInfo
+} from '@fullcalendar/vue3'
+import dayGridPlugin from '@fullcalendar/vue3/daygrid'
+import koLocale from '@fullcalendar/vue3/locales/ko'
+import classicThemePlugin from '@fullcalendar/vue3/themes/classic'
+import '@fullcalendar/vue3/skeleton.css'
+import '@fullcalendar/vue3/themes/classic/theme.css'
+import '@fullcalendar/vue3/themes/classic/palette.css'
 import UIKit from 'uikit'
 // @ts-ignore
 import Editor from '@toast-ui/editor'
-import { 
-    DesktopCalStore,
-    useEnableMouse, useDisableMouse,
-    useGetCalendarList,
-    useOpenExternalLink,
-    useSettingWindow
-} from '../../../composables/util'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
+import {
+    desktopApi,
+    type CalendarListEntry,
+    type Cleanup
+} from '../../../services/desktopApi'
+import {
+    disableMouse as useDisableMouse,
+    enableMouse as useEnableMouse
+} from '../../../features/window/mousePassthrough'
+import {
+    applyCalendarEventToDraft,
+    createCalendarEventDraft,
+    formatAddedDate,
+    formatDraftStartForTimeType,
+    resetCalendarEventDraft,
+    toCalendarEventInput
+} from '../../../features/calendar/calendarEventForm'
 import popupEvent from './popupEvents.vue'
 import { ko } from 'date-fns/locale'
 
 import dayjs from 'dayjs'
 
-const mFormat = 'YYYY-MM-DD'
-const mtFormat = 'YYYY-MM-DD hh:mm A'
 const dpFormat = 'yyyy-MM-dd'
 const dptFormat = 'yyyy-MM-dd hh:mm aa'
 const ymFormat = 'YYYY년 M월'
+const useOpenExternalLink = desktopApi.openExternalLink
 
 const store = inject("DeskCalStore") as DesktopCalStore
 
@@ -126,23 +151,24 @@ const eventDrop = ref<UIKit.UIkitDropElement>()
 let isShow = ref(false)
 let isEdit = ref(false)
 let eventValue = {}
-let startTime = ref((new Date()).toString())
-let endTime = ref('')
-let colorid = ref(1)
+const eventDraft = reactive(createCalendarEventDraft())
+const {
+    calendarId: calPrimaryID,
+    summary,
+    timeType,
+    startTime,
+    endTime,
+    colorId: colorid
+} = toRefs(eventDraft)
 const buttonType = ref(store.getOptions("calendar").buttonType)
 let showAdd = false
 
 const Fcalendar = ref<InstanceType<typeof FullCalendar>>()
-let calendarApi = ref<Calendar>()
+let calendarApi = ref<CalendarApi>()
 const calendarMonth = ref("")
 const eventform = ref()
 
-const summary = ref("")
-const timeType = ref('날짜')
-
-const calendarids = ref()
-const calPrimaryID = ref('')
-
+const calendarids = ref<CalendarListEntry[]>([])
 
 let descriptEditor:Editor
 const description = ref<HTMLElement>()
@@ -195,11 +221,8 @@ let gcolor = [
       ]
 
 function initialEventAdd() {
-    startTime.value = ''
-    endTime.value = ''
+    resetCalendarEventDraft(eventDraft)
     descriptEditor.setMarkdown('')
-    summary.value = ''
-    colorid.value = 1
     eventValue = {}
 }
 
@@ -224,23 +247,7 @@ function loadSetting() {
 
     // @ts-ignore
     btnDrag.style.webkitAppRegion = "none"
-    useSettingWindow()
-    
-    window.ipcRenderer.on('setWinClosed', (_event) => {
-        btn?.removeAttribute("disabled")
-        
-        // @ts-ignore
-        btnDrag.style.webkitAppRegion = "drag"
-    })
-    window.ipcRenderer.on('requstReloadCalendar', async (_event) => {
-        calendarids.value = await useGetCalendarList()
-        calendarids.value.forEach((value:any) => {
-            if (value.primary) {
-                calPrimaryID.value = value.id
-            }
-        })
-        reloadEvent()
-    })
+    desktopApi.openSettingWindow()
 }
 
 function insertEvent() {
@@ -249,20 +256,16 @@ function insertEvent() {
 
     let resultHtml = descriptEditor.getHTML()
 
-    if (endTime.value == '') {
-        endTime.value = startTime.value
-    }
-
-    endTime.value = dayjs(endTime.value).add(1, 'd').format(mFormat)
-
-    var isDay = timeType.value == '날짜'
-
-    if (!isDay) {
-        endTime.value = dayjs(endTime.value).toISOString()
-        startTime.value = dayjs(startTime.value).toISOString()
-    }
-
-    eventform.value.insertEvent(calPrimaryID.value, isDay, startTime.value, endTime.value, summary.value, resultHtml, colorid.value)
+    const input = toCalendarEventInput(eventDraft, resultHtml)
+    eventform.value.insertEvent(
+        input.calendarId,
+        input.isAllDay,
+        input.start,
+        input.end,
+        input.title,
+        input.content,
+        input.colorId
+    )
     initialEventAdd()
 }
 
@@ -282,23 +285,7 @@ function editEvent(ev:any) {
     isEdit.value = true
     eventDrop.value?.show()
 
-    summary.value = ev.title
-
-    if (ev.extendedProps.description != null) {
-        descriptEditor.setMarkdown(ev.extendedProps.description)
-    } else {
-        descriptEditor.setMarkdown("")
-    }
-
-    if (timeType.value == "날짜") {
-        startTime.value = dayjs(ev.start).format(mFormat)
-        endTime.value = dayjs(ev.end).add(-1, "d").format(mFormat)
-    } else {
-        startTime.value = dayjs(ev.start).format(mtFormat)
-        endTime.value = dayjs(ev.end).add(-1, "d").format(mtFormat)
-    }
-    
-    colorid.value = ev.extendedProps.e.colorId - 1
+    descriptEditor.setMarkdown(applyCalendarEventToDraft(eventDraft, ev))
     eventValue = ev
 }
 
@@ -308,40 +295,35 @@ function insertEditEvent() {
 
     let resultHtml = descriptEditor.getHTML()
 
-    if (endTime.value == '') {
-        endTime.value = startTime.value
-    }
-
-    endTime.value = dayjs(endTime.value).add(1, 'd').format(mFormat)
-
-    var isDay = timeType.value == '날짜'
-
-    if (!isDay) {
-        endTime.value = dayjs(endTime.value).toISOString()
-        startTime.value = dayjs(startTime.value).toISOString()
-    }
-
-    eventform.value.insertEvent(calPrimaryID.value, isDay, startTime.value, endTime.value, summary.value, resultHtml, colorid.value)
+    const input = toCalendarEventInput(eventDraft, resultHtml)
+    eventform.value.insertEvent(
+        input.calendarId,
+        input.isAllDay,
+        input.start,
+        input.end,
+        input.title,
+        input.content,
+        input.colorId
+    )
     eventform.value.deleteInsertEvent(eventValue)
     initialEventAdd()
 }
 
 const addEventDate = (st?:string) => {
     if (st != undefined) {
-        if (timeType.value != '날짜') {
-            st = dayjs(st).format(mtFormat)
-        }
-        startTime.value = st
-        endTime.value = st
+        const formattedDate = formatAddedDate(st, timeType.value)
+        startTime.value = formattedDate
+        endTime.value = formattedDate
         isEdit.value = false
         eventDrop.value?.show()
     }
 }
 
-const addPlusBtn = (daycellargs: DayCellMountArg) => {
+const addPlusBtn = (daycellargs: MountInfo<DayCellInfo>) => {
     const plusbtn = document.createElement('a')
     plusbtn.setAttribute('uk-icon', 'plus-circle')
     plusbtn.setAttribute('data-date', daycellargs.el.getAttribute('data-date') as string)
+    plusbtn.classList.add('calendar-pointer-interactive')
     plusbtn.onmouseover = useEnableMouse
     plusbtn.onmouseout = useDisableMouse
     plusbtn.style.margin = '4px'
@@ -359,7 +341,7 @@ const addPlusBtn = (daycellargs: DayCellMountArg) => {
     })
 }
 
-const deleteDayNumberToHangul = (daycellargs: DayCellMountArg) => {
+const deleteDayNumberToHangul = (daycellargs: DayCellInfo) => {
     var text = daycellargs.dayNumberText
     
     if (text.includes('월')) {
@@ -374,24 +356,27 @@ const deleteDayNumberToHangul = (daycellargs: DayCellMountArg) => {
 
 const calendarStyleVars = computed(() => {
     return {
-        '--calendar-border-color': convertRGBA(store.options.calendar.color),
-        '--calendar-bg-color': convertRGBA(store.options.calendar.background)
+        '--calendar-bg-color': convertRGBA(store.options.calendar.background),
+        '--fc-classic-border': convertRGBA(store.options.calendar.color)
     }
 })
 
 const calendarOptions: CalendarOptions = {
     plugins: [
         dayGridPlugin,
-        calendarDayjsMoment
+        classicThemePlugin
     ],
     initialView: store.getOptions('calendarType'),
     headerToolbar: false,
-    themeSystem: 'standard',
     locale: koLocale,
     height: "100%",
     dayMaxEventRows: false,
     fixedWeekCount: false,
     views: {
+        dayGrid: {
+            tableHeaderClass: (tableHeader) =>
+                tableHeader.isSticky ? 'calendar-sticky-header' : ''
+        },
         month: {
             type: 'dayGridMonth',
             duration: {
@@ -407,8 +392,18 @@ const calendarOptions: CalendarOptions = {
             expandRows: false,
         }
     },
+    dayCellClass: (dayCell) => [
+        'calendar-day-cell',
+        dayCell.isToday ? 'calendar-day-today' : ''
+    ].filter(Boolean).join(' '),
     dayCellDidMount: addPlusBtn,
-    dayCellContent: deleteDayNumberToHangul,
+    dayCellTopContent: deleteDayNumberToHangul,
+    dayCellTopInnerClass: 'calendar-day-number',
+    dayHeaderClass: 'calendar-day-header',
+    dayHeaderInnerClass: 'calendar-day-header-inner',
+    eventClass: 'calendar-pointer-interactive',
+    rowMoreLinkClass: 'calendar-pointer-interactive',
+    popoverClass: 'calendar-more-popover calendar-pointer-interactive',
     eventMouseEnter: (mouseinfo) => {
         if (eventform.value.isDelete) {
             return
@@ -435,7 +430,11 @@ const calendarOptions: CalendarOptions = {
     },
     eventTimeFormat: { hour12: true, hour: '2-digit'},
     eventDisplay: 'block',
-    dayPopoverFormat: 'MM월 DD일 dddd',
+    popoverFormat: {
+        month: '2-digit',
+        day: '2-digit',
+        weekday: 'long'
+    },
     moreLinkText: '더보기',
     navLinks: false,
 }
@@ -474,14 +473,34 @@ function popupEventmouseout() {
     isShow.value = false
 }
 
+let stopSettingWindowClosed: Cleanup | undefined
+let stopCalendarReloadRequested: Cleanup | undefined
+
+const selectPrimaryCalendar = () => {
+    const primaryCalendar = calendarids.value.find((calendar) => calendar.primary)
+    if (primaryCalendar) {
+        calPrimaryID.value = primaryCalendar.id
+    }
+}
+
 onMounted(async () => {
-    eventDrop.value = UIKit.drop(eventAddDrop.value as HTMLElement)
-    calendarids.value = await useGetCalendarList()
-    calendarids.value.forEach((value:any) => {
-        if (value.primary) {
-            calPrimaryID.value = value.id
+    stopSettingWindowClosed = desktopApi.onSettingWindowClosed(() => {
+        document.querySelector("#createOption")?.removeAttribute("disabled")
+        const btnDrag = document.querySelector("#dragBtn") as HTMLElement | null
+        if (btnDrag) {
+            // @ts-ignore
+            btnDrag.style.webkitAppRegion = "drag"
         }
     })
+    stopCalendarReloadRequested = desktopApi.onCalendarReloadRequested(async () => {
+        calendarids.value = await desktopApi.getCalendarList()
+        selectPrimaryCalendar()
+        reloadEvent()
+    })
+
+    eventDrop.value = UIKit.drop(eventAddDrop.value as HTMLElement)
+    calendarids.value = await desktopApi.getCalendarList()
+    selectPrimaryCalendar()
     
     if (description.value) {
         descriptEditor = new Editor({
@@ -502,9 +521,13 @@ onMounted(async () => {
 
     calendarApi.value = Fcalendar.value?.getApi()
     UIKit.heightViewport(document.querySelector('#calendar') as HTMLElement, { offsetTop: true })
-    await nextTick()
-    calendarApi.value?.updateSize()
     calendarMonth.value = dayjs(calendarApi.value?.getDate()).format(ymFormat)
+})
+
+onBeforeUnmount(() => {
+    stopSettingWindowClosed?.()
+    stopCalendarReloadRequested?.()
+    descriptEditor?.destroy()
 })
 
 watch(startTime, (newValue) => {
@@ -524,12 +547,7 @@ watch(endTime, (newValue) => {
 })
 
 watch(timeType, (newValue) => {
-    if (newValue == '날짜') {
-        startTime.value = dayjs(startTime.value).format(mFormat)
-        // endTime은 watch(startTime)에 의해 자동 변환
-    } else {
-        startTime.value = dayjs(startTime.value).format(mtFormat)
-    }
+    startTime.value = formatDraftStartForTimeType(startTime.value, newValue)
 })
 
 watch(() => store.options.calendarType, (newValue) => {
@@ -553,11 +571,7 @@ watch(() => store.options.calendar.buttonType, (newValue) => {
     app-region: drag;
 }
 
-.fc button {
-    height: none;
-}
-
-.fc .fc-daygrid-day.fc-day-today{
+.calendar-day-today {
     background: rgba(215, 240, 247, 0.6);
 }
 
@@ -597,41 +611,29 @@ watch(() => store.options.calendar.buttonType, (newValue) => {
     color:black;
 }
 
-.fc-event-time,
-a > div.fc-event-title {
-    color: var(--fc-event-text-color);
-}
-
-a.fc-daygrid-day-number,
-a.fc-col-header-cell-cushion {
+.calendar-day-number,
+.calendar-day-header-inner {
     color: black;
 }
 
-.fc-more-popover {
+.calendar-more-popover {
     background:white;
 }
 
 /*Allow pointer-events through*/
-.fc-col-header-cell,
-.fc-daygrid-day-frame{
+.calendar-day-header,
+.calendar-day-cell {
     pointer-events:none
 }
 /*Turn pointer events back on*/
-.fc-daygrid-bg-harness,
-.fc-daygrid-event-harness{
+.calendar-pointer-interactive {
     pointer-events:auto; /*events*/
 }
-.calendar-head-center, .fc-col-header-cell > div > a, .fc-daygrid-day-number, #reload-btn{
+.calendar-head-center,
+.calendar-day-header-inner,
+.calendar-day-number,
+#reload-btn {
   user-select: none;
-}
-.fc-scrollgrid {
-   overflow-y: visible !important;
-}
-
-.fc-theme-standard .fc-scrollgrid,
-.fc-theme-standard td,
-.fc-theme-standard th {
-    border-color: var(--calendar-border-color) !important;
 }
 
 #calendar,
@@ -639,7 +641,8 @@ a.fc-col-header-cell-cushion {
     background-color: var(--calendar-bg-color);
 }
 
-.fc .fc-scrollgrid-section-sticky > * {
+.calendar-sticky-header,
+.calendar-sticky-header > * {
     background-color: transparent !important;
 }
 </style>

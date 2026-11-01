@@ -91,17 +91,29 @@
 
 <script lang="ts">
 import { inject, ref } from 'vue'
+import type { EventInput } from '@fullcalendar/vue3'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
 import {
-    DesktopCalStore,
-    useEnableMouse, useDisableMouse,
-    useOpenExternalLink,
-    useGetCalColor, useGetBatchCalendarEvents,
-    useInsertCaledarEvent, useDeleteCalendarEvent } from '../../../composables/util'
+    desktopApi,
+    type CalendarColor,
+    type GoogleCalendarColors
+} from '../../../services/desktopApi'
+import {
+    toFullCalendarEvent,
+    type GoogleCalendarEvent
+} from '../../../features/calendar/calendarEvents'
+import { useCalendarEventLoader } from '../../../features/calendar/useCalendarEventLoader'
+import {
+    createCalendarRefreshScheduler,
+    type CalendarRefreshScheduler
+} from '../../../features/calendar/calendarRefreshScheduler'
+import {
+    disableMouse,
+    enableMouse
+} from '../../../features/window/mousePassthrough'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 dayjs.extend(relativeTime)
-
-let accessCount = 0
 
 export default {
     props: [
@@ -109,134 +121,74 @@ export default {
     ],
     data() {
         return {
-            gcolor: null as any,
+            gcolor: null as GoogleCalendarColors | null,
             timeShow: false,
             timePast: false,
             isDelete: false,
             isEdit: false,
             deleteError: false,
-            // const editError = ref(false)
-            // const isUpdate = ref(false)
-            refreshInterval: null as any,
-            useEnableMouse,
-            useDisableMouse,
+            deleteErrorTimeout: undefined as ReturnType<typeof setTimeout> | undefined,
+            refreshScheduler: undefined as CalendarRefreshScheduler | undefined,
+            useEnableMouse: enableMouse,
+            useDisableMouse: disableMouse,
             dayjs
         }
     },
     setup() {
         const store = inject("DeskCalStore") as DesktopCalStore
         const gEvent = ref()
-        return { store, gEvent }
+        const {
+            load: loadCalendarEvents,
+            cancel: cancelCalendarEventLoad
+        } = useCalendarEventLoader()
+        return {
+            store,
+            gEvent,
+            loadCalendarEvents,
+            cancelCalendarEventLoad
+        }
     },
     methods: {
         openGCLink() {
-            useOpenExternalLink(this.calEvent.extendedProps?.e.htmlLink)
+            desktopApi.openExternalLink(this.calEvent.extendedProps?.e.htmlLink)
         },
-        addEvent(ev:any, color:any) {
-            ev.forEach((e:any) => {
-                var ev = {}
-                if (e.start.dateTime) {
-                    ev = {
-                        id: e.id,
-                        title: e.summary,
-                        allDay: false,
-                        start: e.start.dateTime,
-                        end: e.end.dateTime,
-                        // color: e.colorId
-                        backgroundColor: e.colorId
-                            ? this.gcolor.event[e.colorId].background
-                            : color.background,
-                        borderColor: e.colorId
-                            ? this.gcolor.event[e.colorId].background
-                            : color.background,
-                        // extendedProps
-                        e,
-                        organizer: e.organizer,
-                        description: e.description || null,
-                        created: e.created
-                    }
-                } else {
-                    ev = {
-                        id: e.id,
-                        title: e.summary,
-                        start: e.start.date,
-                        end: e.end.date,
-                        // color: e.colorId
-                        backgroundColor: e.colorId
-                            ? this.gcolor.event[e.colorId].background
-                            : color.background,
-                        borderColor: e.colorId
-                            ? this.gcolor.event[e.colorId].background
-                            : color.background,
-                        // extendedProps
-                        e,
-                        organizer: e.organizer,
-                        description: e.description || null,
-                        created: e.created
-                    }
-                }
-                this.calendarApi.addEvent(ev)
-            })
+        addEvent(events: GoogleCalendarEvent[], color: CalendarColor) {
+            if (!this.gcolor) {
+                return
+            }
+            events
+                .map((event) => toFullCalendarEvent(event, color, this.gcolor!.event))
+                .forEach((event) => this.calendarApi.addEvent(event))
+        },
+        addFullCalendarEvents(events: EventInput[]) {
+            events.forEach((event) => this.calendarApi.addEvent(event))
         },
         removeAllEvents() {
             this.calendarApi.removeAllEvents()
         },
-        init() {
-            var colors:any = {}
-            // console.log(this.calendarids)
-            if (this.calendarids) {
-                if (this.calendarids.length == 0) {
-                    this.removeAllEvents()
-                    this.$emit("reloadEnd")
-                    return
-                }
+        async init() {
+            if (!this.calendarids?.length) {
+                this.cancelCalendarEventLoad()
+                this.removeAllEvents()
+                this.$emit("reloadEnd")
+                return
             }
 
-            useGetCalColor((res) => {
-                this.gcolor = res
+            const result = await this.loadCalendarEvents(
+                this.calendarids,
+                this.calendarApi.view.activeStart.toString(),
+                this.calendarApi.view.activeEnd.toString()
+            )
+            if (!result) {
+                return
+            }
+
+            if (result.status === 'loaded') {
+                this.gcolor = result.colors
                 this.removeAllEvents()
-                accessCount += 1
-                
-                const checkedIds: string[] = []
-                for (const cal of this.calendarids) {
-                    if (!cal.checked) {
-                        continue
-                    }
-                    checkedIds.push(cal.id)
-                    colors[cal.id] = this.gcolor.calendar[cal.colorId]
-                }
-
-                if (checkedIds.length === 0) {
-                    // No checked calendars
-                    if (accessCount >= 2) {
-                         accessCount -= 1
-                    }
-                    this.$emit("reloadEnd")
-                    return
-                }
-
-                useGetBatchCalendarEvents(
-                    checkedIds,
-                    this.calendarApi.view.activeStart.toString(),
-                    this.calendarApi.view.activeEnd.toString(),
-                    (results) => {
-                        // Handle concurrency logic for reloadEnd
-                        if (accessCount >= 2) {
-                            accessCount -= 1
-                        } else {
-                            accessCount -= 1
-                            // If this callback runs, we have results
-                            // Iterate results
-                            for (const [calId, events] of Object.entries(results)) {
-                                if (events && events.items && events.items.length > 0) {
-                                    this.addEvent(events.items, colors[calId])
-                                }
-                            }
-                            this.$emit("reloadEnd")
-                        }
-                    }
-                )
-            })
+                this.addFullCalendarEvents(result.events)
+            }
+            this.$emit("reloadEnd")
         },
         getFromNow() {
             const start = this.calEvent.start
@@ -258,64 +210,92 @@ export default {
         },
         deleteEvent() {
             this.isDelete = true
-            useDeleteCalendarEvent(
+            desktopApi.deleteCalendarEvent(
                 this.calEvent.extendedProps.organizer.email,
-                this.calEvent.id,
-                (req) => {
+                this.calEvent.id
+            )
+                .then((req) => {
                     this.isDelete = false
-                    // console.log(req)
                     if (req == undefined ) { //} && req != null && req?.status == 204) {
                         this.$emit("showPopup", false)
                         this.calendarApi.getEventById(this.calEvent.id).remove()
                     } else {
-                        this.deleteError = true
-                        setTimeout(() => {
-                            this.deleteError = false
-                        }, 2000)
+                        this.showDeleteError()
                     }
-                }
-            )
+                })
+                .catch((error) => {
+                    console.error(error)
+                    this.isDelete = false
+                    this.showDeleteError()
+                })
         },
         deleteInsertEvent(ce:any) {
             this.isDelete = true
-            useDeleteCalendarEvent(ce.extendedProps.organizer.email, ce.id, (req) => {
-                this.isDelete = false
-                if (req == undefined) { // != null && req?.status == 204) {
-                    this.$emit("showPopup", false)
-                    // console.log(ce, this.calendarApi.getEventById(ce.id))
-                    this.calendarApi.getEventById(ce.id).remove()
-                } else {
-                    this.deleteError = true
-                    setTimeout(() => {
-                        this.deleteError = false
-                    }, 2000)
-                }
-            })
+            desktopApi.deleteCalendarEvent(ce.extendedProps.organizer.email, ce.id)
+                .then((req) => {
+                    this.isDelete = false
+                    if (req == undefined) { // != null && req?.status == 204) {
+                        this.$emit("showPopup", false)
+                        this.calendarApi.getEventById(ce.id).remove()
+                    } else {
+                        this.showDeleteError()
+                    }
+                })
+                .catch((error) => {
+                    console.error(error)
+                    this.isDelete = false
+                    this.showDeleteError()
+                })
         },
         editEventSend() {
             this.$emit("editEvent", this.calEvent)
         },
         insertEvent(calId:string, isDay:boolean, start:string, end:string, title:string, content:string, colorid:number) {
-            useInsertCaledarEvent(
+            desktopApi.insertCalendarEvent(
                 calId,
                 isDay,
                 start,
                 end,
                 title,
                 content,
-                colorid + 1,
-                (req) => {
-                    this.addEvent([req], this.gcolor.calendar[colorid])
-                }
+                colorid + 1
             )
+                .then((request) => {
+                    if (request && this.gcolor) {
+                        this.addEvent([request], this.gcolor.calendar[colorid])
+                    }
+                })
+                .catch((error) => {
+                    console.error(error)
+                })
+        },
+        showDeleteError() {
+            this.deleteError = true
+            if (this.deleteErrorTimeout) {
+                clearTimeout(this.deleteErrorTimeout)
+            }
+            this.deleteErrorTimeout = setTimeout(() => {
+                this.deleteError = false
+                this.deleteErrorTimeout = undefined
+            }, 2000)
         },
         forceReload() {
             this.init()
         }
     },
     mounted() {
+        this.refreshScheduler = createCalendarRefreshScheduler(() => {
+            this.init()
+        })
         this.init()
-        this.refreshInterval = setInterval(this.init, parseInt(this.getRefresh) * 1000)
+        this.refreshScheduler.start(this.getRefresh)
+    },
+    beforeUnmount() {
+        this.refreshScheduler?.stop()
+        this.cancelCalendarEventLoad()
+        if (this.deleteErrorTimeout) {
+            clearTimeout(this.deleteErrorTimeout)
+        }
     },
     computed: {
         getDescription() {
@@ -326,10 +306,9 @@ export default {
         }
     },
     watch: {
-        getRefresh(oldValue, newValue) {
+        getRefresh(newValue, oldValue) {
             if (oldValue != newValue) {
-                clearInterval(this.refreshInterval)
-                this.refreshInterval = setInterval(this.init, parseInt(newValue) * 1000)
+                this.refreshScheduler?.update(newValue)
             }
         }
     },
@@ -347,9 +326,9 @@ export default {
                         if (gcalEvent.offsetHeight + top > window.outerHeight - 20) {
                             top = eventRect.top - eventRect.titleHeight - gcalEvent.offsetHeight
                             gcalEvent.style.borderTopColor = "white"
-                            gcalEvent.style.borderBottomColor = this.calEvent.backgroundColor
+                            gcalEvent.style.borderBottomColor = this.calEvent.color
                         } else {
-                            gcalEvent.style.borderTopColor = this.calEvent.backgroundColor
+                            gcalEvent.style.borderTopColor = this.calEvent.color
                             gcalEvent.style.borderBottomColor = "white"
                         }
                     }

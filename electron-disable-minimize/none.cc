@@ -1,25 +1,32 @@
-#include <nan.h>
-#include <v8.h>
+#include <node_api.h>
 
-using namespace std;
-using namespace Nan;
-using namespace v8;
+namespace {
 
-using v8::FunctionCallbackInfo;
-using v8::Isolate;
-using v8::Local;
-using v8::Object;
-using v8::String;
-using v8::Value;
-
-NAN_METHOD(DisableMinimize)
-{
-    info.GetReturnValue().Set(Nan::False());
+napi_value DisableMinimize(napi_env env, napi_callback_info) {
+    napi_value result;
+    napi_get_boolean(env, false, &result);
+    return result;
 }
 
-NAN_MODULE_INIT(Initialize)
-{
-    NAN_EXPORT(target, DisableMinimize);
+napi_value Initialize(napi_env env, napi_value exports) {
+    napi_value disableMinimize;
+    napi_create_function(
+        env,
+        "DisableMinimize",
+        NAPI_AUTO_LENGTH,
+        DisableMinimize,
+        nullptr,
+        &disableMinimize
+    );
+    napi_set_named_property(
+        env,
+        exports,
+        "DisableMinimize",
+        disableMinimize
+    );
+    return exports;
 }
 
-NODE_MODULE(addon, Initialize);
+}  // namespace
+
+NAPI_MODULE(NODE_GYP_MODULE_NAME, Initialize)

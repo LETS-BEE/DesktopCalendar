@@ -146,7 +146,8 @@
   
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, inject } from 'vue'
-import { DesktopCalStore, useSendMainSettingData } from '../../../composables/util'
+import type { DesktopCalStore } from '../../../stores/desktopCalendar'
+import { desktopApi } from '../../../services/desktopApi'
 import dayjs from 'dayjs'
 import { Sketch } from '@ckpack/vue-color'
 
@@ -163,8 +164,8 @@ const exampleDayjsText = ref("")
 
 interface timerStyleif {
     color: string,
-    weight: string,
-    size: string
+    weight: string | number,
+    size: string | number
 }
 const timerStyle = ref<timerStyleif>()
 const timerSize = ref("")
@@ -190,7 +191,7 @@ function met(format:string) {
 
 function save(key:string, value:any) {
     // store.setOption(key, value)
-    useSendMainSettingData(key, value)
+    desktopApi.sendMainSettingData(key, value)
 }
 
 function saveTimerDayjs() {
@@ -234,8 +235,8 @@ onMounted(() => {
     // { color, weight, size }
     timerStyle.value = store.getOptions("timerStyle")
     if (timerStyle.value) {
-        timerSize.value = timerStyle.value.size
-        timerWeight.value = timerStyle.value.weight
+        timerSize.value = String(timerStyle.value.size)
+        timerWeight.value = String(timerStyle.value.weight)
         timerColor.value = timerColorPicker.value = timerColorSelect.value = timerStyle.value.color
     }
 })
@@ -260,7 +261,7 @@ watch(timerColorPicker, (newValue) => {
 })
 
 </script>
-  
+
 <style>
 .time-example > tbody > tr > td {
     word-break: keep-all;
@@ -274,4 +275,3 @@ watch(timerColorPicker, (newValue) => {
     opacity: 0;
 }
 </style>
-  

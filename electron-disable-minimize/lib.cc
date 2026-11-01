@@ -1,61 +1,118 @@
-#include <nan.h>
-#include <v8.h>
+#include <windows.h>
 
-using namespace std;
-using namespace Nan;
-using namespace v8;
+#include <algorithm>
+#include <cstdint>
+#include <cstring>
+#include <node_api.h>
 
-using v8::FunctionCallbackInfo;
-using v8::Isolate;
-using v8::Local;
-using v8::Object;
-using v8::String;
-using v8::Value;
+namespace {
 
-NAN_METHOD(DisableMinimize)
-{
-    if (info.Length() >= 2)
-    {
-        return Nan::ThrowError("electron-disable-minimize: Invalid number of arguments. Should be 1");
+napi_value ToBoolean(napi_env env, bool value) {
+    napi_value result;
+    napi_get_boolean(env, value, &result);
+    return result;
+}
+
+napi_value DisableMinimize(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+
+    if (argc != 1) {
+        napi_throw_type_error(
+            env,
+            nullptr,
+            "DisableMinimize expects one BrowserWindow native handle Buffer."
+        );
+        return nullptr;
     }
 
-    v8::Local<v8::Object> bufferObj;
+    bool isBuffer = false;
+    napi_is_buffer(env, args[0], &isBuffer);
+    if (!isBuffer) {
+        napi_throw_type_error(
+            env,
+            nullptr,
+            "Argument must be BrowserWindow.getNativeWindowHandle()."
+        );
+        return nullptr;
+    }
 
-    if (info[0]->IsArrayBufferView() && info[0]->IsObject() && info[0]->IsTypedArray() && info[0]->IsUint8Array())
-    {
-        bufferObj = info[0].As<v8::Object>();
+    void* bufferData = nullptr;
+    size_t bufferLength = 0;
+    napi_get_buffer_info(env, args[0], &bufferData, &bufferLength);
+    if (bufferData == nullptr || bufferLength == 0) {
+        napi_throw_range_error(env, nullptr, "Native window handle Buffer is empty.");
+        return nullptr;
     }
-    else
-    {
-        Nan::ThrowTypeError("\n\nArgument must be a HWND handle!\nPlease use \"yourBrowserWindow.getNativeWindowHandle();\"\nhttps://electronjs.org/docs/api/browser-window#wingetnativewindowhandle\n");
-        info.GetReturnValue().Set(Nan::False());
-        return;
+
+    uintptr_t rawHandle = 0;
+    std::memcpy(
+        &rawHandle,
+        bufferData,
+        std::min(bufferLength, sizeof(rawHandle))
+    );
+    HWND windowHandle = reinterpret_cast<HWND>(rawHandle);
+    if (!IsWindow(windowHandle)) {
+        return ToBoolean(env, false);
     }
-    unsigned char *bufferData = (unsigned char *)node::Buffer::Data(bufferObj);
-    unsigned long handle = *reinterpret_cast<unsigned long *>(bufferData);
-    HWND hwnd = (HWND)handle;
 
     HWND desktop = GetDesktopWindow();
-    HWND hWorkerW = NULL;
-    HWND hShellViewWin = NULL;
-    do
-    {
-        hWorkerW = FindWindowEx(desktop, hWorkerW, "WorkerW", NULL);
-        hShellViewWin = FindWindowEx(hWorkerW, 0, "SHELLDLL_DefView", 0);
-    } while (hShellViewWin == NULL && hWorkerW != NULL);
+    HWND workerWindow = nullptr;
+    HWND shellViewWindow = nullptr;
 
-    bool ok = true;
-    if (hShellViewWin == NULL)
-        ok = false;
-    else
-        SetWindowLongPtr(hwnd, -8, (LONG_PTR)hShellViewWin);
+    while ((workerWindow = FindWindowExA(
+        desktop,
+        workerWindow,
+        "WorkerW",
+        nullptr
+    )) != nullptr) {
+        shellViewWindow = FindWindowExA(
+            workerWindow,
+            nullptr,
+            "SHELLDLL_DefView",
+            nullptr
+        );
+        if (shellViewWindow != nullptr) {
+            break;
+        }
+    }
 
-    info.GetReturnValue().Set(ok ? Nan::True() : Nan::False());
+    if (shellViewWindow == nullptr) {
+        return ToBoolean(env, false);
+    }
+
+    SetLastError(ERROR_SUCCESS);
+    const LONG_PTR previousParent = SetWindowLongPtr(
+        windowHandle,
+        GWLP_HWNDPARENT,
+        reinterpret_cast<LONG_PTR>(shellViewWindow)
+    );
+    const bool succeeded =
+        previousParent != 0 || GetLastError() == ERROR_SUCCESS;
+
+    return ToBoolean(env, succeeded);
 }
 
-NAN_MODULE_INIT(Initialize)
-{
-    NAN_EXPORT(target, DisableMinimize);
+napi_value Initialize(napi_env env, napi_value exports) {
+    napi_value disableMinimize;
+    napi_create_function(
+        env,
+        "DisableMinimize",
+        NAPI_AUTO_LENGTH,
+        DisableMinimize,
+        nullptr,
+        &disableMinimize
+    );
+    napi_set_named_property(
+        env,
+        exports,
+        "DisableMinimize",
+        disableMinimize
+    );
+    return exports;
 }
 
-NODE_MODULE(addon, Initialize);
+}  // namespace
+
+NAPI_MODULE(NODE_GYP_MODULE_NAME, Initialize)

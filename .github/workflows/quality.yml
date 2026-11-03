@@ -42,6 +42,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Renderer smoke test
+        run: pnpm test:renderer
+
   package-windows:
     needs: quality
     runs-on: windows-latest

@@ -78,6 +78,7 @@
             :calendarApi="calendarApi"
             :calendarids="calendarids"
             :calEvent="eventValue"
+            :anchorElement="eventElement"
             :isShow="isShow"
             @reloadEnd="reloadEnd"
             @showPopup="showPopup"
@@ -95,6 +96,7 @@ import {
     onMounted,
     reactive,
     ref,
+    shallowRef,
     toRefs,
     watch,
     inject,
@@ -104,6 +106,7 @@ import FullCalendar, {
     type CalendarApi,
     type CalendarOptions,
     type DayCellInfo,
+    type EventApi,
     type MountInfo
 } from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/vue3/daygrid'
@@ -134,6 +137,8 @@ import {
     toCalendarEventInput
 } from '../../../features/calendar/calendarEventForm'
 import popupEvent from './popupEvents.vue'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
 import { ko } from 'date-fns/locale'
 
 import dayjs from 'dayjs'
@@ -150,7 +155,8 @@ const eventDrop = ref<UIKit.UIkitDropElement>()
 
 let isShow = ref(false)
 let isEdit = ref(false)
-let eventValue = {}
+const eventValue = shallowRef<Partial<EventApi>>({})
+const eventElement = shallowRef<HTMLElement>()
 const eventDraft = reactive(createCalendarEventDraft())
 const {
     calendarId: calPrimaryID,
@@ -164,11 +170,11 @@ const buttonType = ref(store.getOptions("calendar").buttonType)
 let showAdd = false
 
 const Fcalendar = ref<InstanceType<typeof FullCalendar>>()
-let calendarApi = ref<CalendarApi>()
+const calendarApi = shallowRef<CalendarApi>()
 const calendarMonth = ref("")
 const eventform = ref()
 
-const calendarids = ref<CalendarListEntry[]>([])
+const calendarids = ref<CalendarListEntry[]>()
 
 let descriptEditor:Editor
 const description = ref<HTMLElement>()
@@ -223,10 +229,13 @@ let gcolor = [
 function initialEventAdd() {
     resetCalendarEventDraft(eventDraft)
     descriptEditor.setMarkdown('')
-    eventValue = {}
+    eventValue.value = {}
 }
 
 function reloadEvent() {
+    if (!calendarApi.value || !calendarids.value || !eventform.value) {
+        return
+    }
     document.querySelector("#reload-btn")?.setAttribute("disabled", "true")
 
     eventform.value.forceReload()
@@ -286,7 +295,7 @@ function editEvent(ev:any) {
     eventDrop.value?.show()
 
     descriptEditor.setMarkdown(applyCalendarEventToDraft(eventDraft, ev))
-    eventValue = ev
+    eventValue.value = ev
 }
 
 function insertEditEvent() {
@@ -305,7 +314,7 @@ function insertEditEvent() {
         input.content,
         input.colorId
     )
-    eventform.value.deleteInsertEvent(eventValue)
+    eventform.value.deleteInsertEvent(eventValue.value)
     initialEventAdd()
 }
 
@@ -357,6 +366,7 @@ const deleteDayNumberToHangul = (daycellargs: DayCellInfo) => {
 const calendarStyleVars = computed(() => {
     return {
         '--calendar-bg-color': convertRGBA(store.options.calendar.background),
+        '--fc-classic-background': 'transparent',
         '--fc-classic-border': convertRGBA(store.options.calendar.color)
     }
 })
@@ -409,19 +419,8 @@ const calendarOptions: CalendarOptions = {
             return
         }
         useEnableMouse()
-        const el = mouseinfo.el
-        const calendarEl = Fcalendar.value?.$el as HTMLElement
-        var bcr = el.getBoundingClientRect()
-        
-        var eventRect = {
-            titleHeight: el.clientHeight,
-            top: bcr.top + el.clientHeight,
-            left: bcr.left,
-            right: bcr.right,
-            calendarRight: calendarEl.offsetLeft + calendarEl.offsetWidth,
-        }
-        mouseinfo.event.setExtendedProp("eventRect", eventRect)
-        eventValue = mouseinfo.event
+        eventElement.value = mouseinfo.el
+        eventValue.value = mouseinfo.event
         isShow.value = true
     },
     eventMouseLeave: () => {
@@ -477,7 +476,7 @@ let stopSettingWindowClosed: Cleanup | undefined
 let stopCalendarReloadRequested: Cleanup | undefined
 
 const selectPrimaryCalendar = () => {
-    const primaryCalendar = calendarids.value.find((calendar) => calendar.primary)
+    const primaryCalendar = calendarids.value?.find((calendar) => calendar.primary)
     if (primaryCalendar) {
         calPrimaryID.value = primaryCalendar.id
     }
@@ -495,12 +494,16 @@ onMounted(async () => {
     stopCalendarReloadRequested = desktopApi.onCalendarReloadRequested(async () => {
         calendarids.value = await desktopApi.getCalendarList()
         selectPrimaryCalendar()
-        reloadEvent()
     })
 
     eventDrop.value = UIKit.drop(eventAddDrop.value as HTMLElement)
-    calendarids.value = await desktopApi.getCalendarList()
-    selectPrimaryCalendar()
+    calendarApi.value = Fcalendar.value?.getApi()
+    const calendarEl = Fcalendar.value?.getApi().el
+    if (calendarEl) {
+        UIKit.heightViewport(calendarEl, { offsetTop: true })
+    }
+    calendarMonth.value = dayjs(calendarApi.value?.getDate()).format(ymFormat)
+    const calendarListRequest = desktopApi.getCalendarList()
     
     if (description.value) {
         descriptEditor = new Editor({
@@ -519,9 +522,8 @@ onMounted(async () => {
         })
     }
 
-    calendarApi.value = Fcalendar.value?.getApi()
-    UIKit.heightViewport(document.querySelector('#calendar') as HTMLElement, { offsetTop: true })
-    calendarMonth.value = dayjs(calendarApi.value?.getDate()).format(ymFormat)
+    calendarids.value = await calendarListRequest
+    selectPrimaryCalendar()
 })
 
 onBeforeUnmount(() => {
@@ -552,6 +554,7 @@ watch(timeType, (newValue) => {
 
 watch(() => store.options.calendarType, (newValue) => {
     calendarApi.value?.changeView(newValue)
+    reloadEvent()
 })
 
 watch(() => store.options.calendar.buttonType, (newValue) => {

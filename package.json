@@ -21,6 +21,7 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:renderer": "node tests/renderer-smoke.mjs",
     "build": "vue-tsc --noEmit && vite build",
     "native:build": "node-gyp rebuild --directory electron-disable-minimize",
     "native:rebuild": "electron-rebuild --force --which-module electron-disable-minimize",

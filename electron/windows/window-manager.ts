@@ -1,4 +1,5 @@
 import {
+  app,
   BrowserWindow,
   screen,
   shell,
@@ -29,11 +30,22 @@ function debounce<TArgs extends unknown[]>(
   callback: (...args: TArgs) => void,
   wait: number,
 ) {
-  let timeout: NodeJS.Timeout
-  return (...args: TArgs) => {
+  let timeout: NodeJS.Timeout | undefined
+  let pendingArgs: TArgs | undefined
+  const flush = () => {
     clearTimeout(timeout)
-    timeout = setTimeout(() => callback(...args), wait)
+    timeout = undefined
+    if (pendingArgs) {
+      const args = pendingArgs
+      pendingArgs = undefined
+      callback(...args)
+    }
   }
+  return Object.assign((...args: TArgs) => {
+    pendingArgs = args
+    clearTimeout(timeout)
+    timeout = setTimeout(flush, wait)
+  }, { flush })
 }
 
 export class WindowManager {
@@ -44,6 +56,7 @@ export class WindowManager {
   private readonly saveBoundsDebounced = debounce(saveBounds, 250)
 
   constructor(private readonly options: WindowManagerOptions) {
+    app.on('before-quit', () => this.saveBoundsDebounced.flush())
     screen.on('display-removed', () => {
       if (this.mainWindow) {
         const [x, y] = this.mainWindow.getPosition()
@@ -101,6 +114,7 @@ export class WindowManager {
     })
     window.on('close', (event) => event.preventDefault())
     window.on('closed', () => {
+      this.saveBoundsDebounced.flush()
       if (this.mainWindow === window) {
         this.mainWindow = null
       }
@@ -198,6 +212,9 @@ export class WindowManager {
     }
 
     const bounds = window.getBounds()
+    if (bounds.width === width && bounds.height === height) {
+      return
+    }
     const workArea = screen.getDisplayMatching(bounds).workArea
     if (width > workArea.width || height > workArea.height) {
       return
@@ -212,7 +229,7 @@ export class WindowManager {
     bounds.width = width
     bounds.height = height
     window.setBounds(bounds)
-    saveBounds(bounds)
+    this.saveBoundsDebounced(window.getBounds())
   }
 
   getMainWindowSize(): WindowSizeInfo {
@@ -337,7 +354,7 @@ export class WindowManager {
       window.setBounds(nextBounds)
       window.webContents.setZoomFactor(nextDisplay.scaleFactor)
       this.display = nextDisplay
-    } else {
+    } else if (bounds.x !== nextBounds.x || bounds.y !== nextBounds.y) {
       window.setPosition(nextBounds.x, nextBounds.y)
     }
     this.saveBoundsDebounced(nextBounds)

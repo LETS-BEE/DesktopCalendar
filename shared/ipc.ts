@@ -99,7 +99,7 @@ export interface DesktopCalendarApi {
     isAuthorized(): Promise<boolean>
     deleteToken(): void
     getCalendarList(): Promise<CalendarList | null>
-    saveCalendarList(calendarList: CalendarList): void
+    saveCalendarList(calendarList: CalendarList): Promise<void>
     getCalendarColor(): Promise<unknown>
     getCalendarEvents(query: CalendarEventsQuery): Promise<unknown>
     getBatchCalendarEvents(query: BatchCalendarEventsQuery): Promise<CalendarEventBatch>

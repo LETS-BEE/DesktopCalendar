@@ -2,7 +2,6 @@
     <div
         class="uk-card uk-card-default uk-padding-small"
         id="gcal-event"
-        style="min-width: 300px"
         @mouseover="useEnableMouse"
         @mouseout="useDisableMouse"
         ref="gEvent"
@@ -103,6 +102,7 @@ import {
     type GoogleCalendarEvent
 } from '../../../features/calendar/calendarEvents'
 import { useCalendarEventLoader } from '../../../features/calendar/useCalendarEventLoader'
+import { getCalendarPopupPosition } from '../../../features/calendar/calendarPopupPosition'
 import {
     createCalendarRefreshScheduler,
     type CalendarRefreshScheduler
@@ -117,7 +117,7 @@ dayjs.extend(relativeTime)
 
 export default {
     props: [
-        "calEvent", "calendarApi", "calendarids"
+        "calEvent", "calendarApi", "calendarids", "isShow", "anchorElement"
     ],
     data() {
         return {
@@ -129,6 +129,7 @@ export default {
             deleteError: false,
             deleteErrorTimeout: undefined as ReturnType<typeof setTimeout> | undefined,
             refreshScheduler: undefined as CalendarRefreshScheduler | undefined,
+            popupResizeObserver: undefined as ResizeObserver | undefined,
             useEnableMouse: enableMouse,
             useDisableMouse: disableMouse,
             dayjs
@@ -136,7 +137,7 @@ export default {
     },
     setup() {
         const store = inject("DeskCalStore") as DesktopCalStore
-        const gEvent = ref()
+        const gEvent = ref<HTMLElement>()
         const {
             load: loadCalendarEvents,
             cancel: cancelCalendarEventLoad
@@ -167,6 +168,10 @@ export default {
             this.calendarApi.removeAllEvents()
         },
         async init() {
+            if (!this.calendarApi || !this.calendarids) {
+                this.cancelCalendarEventLoad()
+                return
+            }
             if (!this.calendarids?.length) {
                 this.cancelCalendarEventLoad()
                 this.removeAllEvents()
@@ -185,8 +190,10 @@ export default {
 
             if (result.status === 'loaded') {
                 this.gcolor = result.colors
-                this.removeAllEvents()
-                this.addFullCalendarEvents(result.events)
+                this.calendarApi.batchRendering(() => {
+                    this.removeAllEvents()
+                    this.addFullCalendarEvents(result.events)
+                })
             }
             this.$emit("reloadEnd")
         },
@@ -280,19 +287,46 @@ export default {
             }, 2000)
         },
         forceReload() {
-            this.init()
+            return this.init()
+        },
+        positionPopup() {
+            const popup = this.gEvent
+            if (!this.isShow || !popup || !this.anchorElement) {
+                return
+            }
+
+            const viewport = {
+                width: document.documentElement.clientWidth || window.innerWidth,
+                height: document.documentElement.clientHeight || window.innerHeight
+            }
+            const position = getCalendarPopupPosition(
+                this.anchorElement.getBoundingClientRect(),
+                popup.getBoundingClientRect(),
+                viewport,
+                this.calendarApi?.el.getBoundingClientRect().right
+            )
+            popup.style.left = `${position.left}px`
+            popup.style.top = `${position.top}px`
+            popup.style.borderTopColor = position.above ? 'white' : this.calEvent.color
+            popup.style.borderBottomColor = position.above ? this.calEvent.color : 'white'
         }
     },
     mounted() {
         this.refreshScheduler = createCalendarRefreshScheduler(() => {
             this.init()
         })
-        this.init()
         this.refreshScheduler.start(this.getRefresh)
+        this.popupResizeObserver = new ResizeObserver(this.positionPopup)
+        this.popupResizeObserver.observe(this.gEvent!)
+        window.addEventListener('resize', this.positionPopup)
+        window.addEventListener('scroll', this.positionPopup, true)
     },
     beforeUnmount() {
         this.refreshScheduler?.stop()
         this.cancelCalendarEventLoad()
+        this.popupResizeObserver?.disconnect()
+        window.removeEventListener('resize', this.positionPopup)
+        window.removeEventListener('scroll', this.positionPopup, true)
         if (this.deleteErrorTimeout) {
             clearTimeout(this.deleteErrorTimeout)
         }
@@ -303,9 +337,18 @@ export default {
         },
         getRefresh() {
             return this.store.getOptions("refreshTime")
+        },
+        calendarLoadInputs() {
+            return [this.calendarApi, this.calendarids]
         }
     },
     watch: {
+        calendarLoadInputs: {
+            immediate: true,
+            handler() {
+                void this.init()
+            }
+        },
         getRefresh(newValue, oldValue) {
             if (oldValue != newValue) {
                 this.refreshScheduler?.update(newValue)
@@ -313,42 +356,7 @@ export default {
         }
     },
     updated() {
-        this.$nextTick(async () => {
-            var eventRect = this.calEvent.extendedProps?.eventRect
-            if (eventRect) {
-                var top = eventRect.top
-                var left = eventRect.left
-                
-                // let gcalEvent = document.querySelector("#gcal-event") as HTMLDivElement
-                let gcalEvent = this.gEvent
-                if (gcalEvent) {
-                    if (gcalEvent.offsetHeight != 0) {
-                        if (gcalEvent.offsetHeight + top > window.outerHeight - 20) {
-                            top = eventRect.top - eventRect.titleHeight - gcalEvent.offsetHeight
-                            gcalEvent.style.borderTopColor = "white"
-                            gcalEvent.style.borderBottomColor = this.calEvent.color
-                        } else {
-                            gcalEvent.style.borderTopColor = this.calEvent.color
-                            gcalEvent.style.borderBottomColor = "white"
-                        }
-                    }
-
-                    if (gcalEvent.offsetWidth != 0) {
-                        // 오른쪽 끝에 창 생성 시 가로 크기 한계로 가로/세로 길이 변동이 발생하므로
-                        // 디자인이 망가짐을 방지하기 위해 추가함.
-                        gcalEvent.style.left = '0px'
-                        await this.$nextTick()
-                        if (gcalEvent.offsetWidth + left > eventRect.calendarRight - 20) {
-                            left = eventRect.right - gcalEvent.offsetWidth
-                        }
-                    }
-                    
-                    gcalEvent.style.top = Math.round(top).toString() + 'px'
-                    gcalEvent.style.left = Math.round(left).toString() + 'px'
-
-                }
-            }
-        })
+        void this.$nextTick(this.positionPopup)
     }
 }
 </script>
@@ -357,8 +365,12 @@ export default {
 #gcal-event {
     position: fixed;
     display: inline-block;
-    min-width: 270px;
-    max-width: 400px;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: min(300px, calc(100vw - 40px));
+    max-width: min(400px, calc(100vw - 40px));
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
     top: 50px;
     z-index: 10;
     border-top: 6px solid white;
@@ -374,7 +386,7 @@ export default {
 }
 
 .gcal-body {
-    word-wrap: break-word;
+    overflow-wrap: anywhere;
 }
 
 .gcal-title {

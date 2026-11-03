@@ -4,6 +4,7 @@ import type {
     CalendarListEntry,
     GoogleCalendarColors
 } from '../../services/desktopApi'
+import { getCalendarEventTextColor } from './calendarEventColors'
 
 export interface GoogleCalendarEvent {
     id: string
@@ -58,7 +59,7 @@ export const toFullCalendarEvent = (
         start: event.start.dateTime ?? event.start.date,
         end: event.end.dateTime ?? event.end.date,
         color: color.background,
-        contrastColor: color.foreground,
+        contrastColor: getCalendarEventTextColor(color),
         e: event,
         organizer: event.organizer,
         description: event.description || null,

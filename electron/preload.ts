@@ -41,7 +41,7 @@ const desktopCalendar: DesktopCalendarApi = {
     getCalendarList: () =>
       ipcRenderer.invoke(IPC_CHANNELS.getCalendarList) as Promise<CalendarList | null>,
     saveCalendarList: (calendarList) =>
-      ipcRenderer.send(IPC_CHANNELS.saveCalendarList, calendarList),
+      ipcRenderer.invoke(IPC_CHANNELS.saveCalendarList, calendarList) as Promise<void>,
     getCalendarColor: () => ipcRenderer.invoke(IPC_CHANNELS.getCalendarColor),
     getCalendarEvents: (query) =>
       ipcRenderer.invoke(IPC_CHANNELS.getCalendarEvents, query),

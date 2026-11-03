@@ -73,6 +73,7 @@ pnpm dev
 | `pnpm typecheck` | Vue와 TypeScript 타입 검사 |
 | `pnpm lint` | ESLint 검사 |
 | `pnpm test` | Vitest 테스트 실행 |
+| `pnpm test:renderer` | 빌드 후 격리된 Electron 화면에서 초기 로딩·팝업·설정 동작 검증 |
 | `pnpm build` | renderer, preload, main process 빌드 |
 | `pnpm native:rebuild` | 현재 Electron 버전에 맞춰 네이티브 모듈 재빌드 |
 | `pnpm native:smoke` | 네이티브 모듈 로드 확인 |
@@ -80,6 +81,8 @@ pnpm dev
 | `pnpm package:dir` | 설치 프로그램 없이 패키징 결과 생성 |
 
 빌드와 패키징 결과는 각각 `dist`, `dist-electron`, `release`에 생성되며 Git에서 추적하지 않습니다.
+
+`pnpm test:renderer`는 `pnpm build` 이후 실행합니다. 실제 preload와 빌드된 화면을 사용하고 Google API 응답은 테스트 데이터로 대체합니다. 임시 사용자 데이터는 프로젝트의 `tests` 하위에 만들고 종료 시 정리합니다.
 
 ## 아키텍처
 
@@ -128,6 +131,9 @@ renderer는 Node.js API나 `ipcRenderer`에 직접 접근하지 않고 `contextB
 
 ### v3.2.0 (최신)
 
+- FullCalendar 배경 투명도, 첫 실행 시 일정 로딩과 우측 이벤트 팝업의 화면 이탈을 수정했습니다.
+- 설정 화면을 지연 로딩하고 창 크기 초기화를 달력 목록 조회와 분리했습니다.
+- 크기 슬라이더의 변경 요청을 프레임별로 묶고 창 크기 저장을 지연 처리하며, 달력 선택 저장 후 새로고침 순서를 보장했습니다.
 - Electron main process를 IPC, 데이터 저장, Google 서비스, 창 관리 모듈로 분리했습니다.
 - renderer의 직접 IPC 접근을 타입이 지정된 preload API로 교체했습니다.
 - Electron 45, Vite 8, FullCalendar 7, Pinia 4, Vitest 5, TypeScript 6으로 업그레이드했습니다.

@@ -53,7 +53,9 @@ export const desktopApi = {
     },
 
     saveCalendarList(calendarList: CalendarListEntry[]) {
-        window.desktopCalendar.google.saveCalendarList(calendarList)
+        // Vue wraps the list and its entries in proxies; IPC needs plain data.
+        const payload = JSON.parse(JSON.stringify(calendarList)) as CalendarListEntry[]
+        return window.desktopCalendar.google.saveCalendarList(payload)
     },
 
     async getCalendarList(): Promise<CalendarListEntry[]> {

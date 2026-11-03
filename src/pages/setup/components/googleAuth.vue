@@ -62,7 +62,7 @@ function auth() {
 }
 
 function save() {
-    desktopApi.saveCalendarList(calendarList.value)
+    return desktopApi.saveCalendarList(calendarList.value)
 }
 
 onBeforeUnmount(() => {

@@ -6,13 +6,6 @@ import App from './App.vue'
 
 // router import
 import { createRouter, createWebHashHistory, /* createWebHistory */ } from 'vue-router'
-import MainView from './pages/main/index.vue'
-import SettingsView from './pages/settings/index.vue'
-import SetupView from './pages/setup/index.vue'
-
-import { VueDatePicker } from '@vuepic/vue-datepicker'
-import '@vuepic/vue-datepicker/dist/main.css'
-
 // pinia import ==> window id
 import { createPinia } from 'pinia'
 import {
@@ -30,23 +23,22 @@ const router = createRouter({
         {
             path: '/',
             name: 'MainPage',
-            component: MainView
+            component: () => import('./pages/main/index.vue')
         },
         {
             path: '/setting',
             name: 'SettingPage',
-            component: SettingsView
+            component: () => import('./pages/settings/index.vue')
         },
         {
             path: '/setup',
             name: 'SetupPage',
-            component: SetupView
+            component: () => import('./pages/setup/index.vue')
         }
     ]
 })
 
 const app = createApp(App)
-app.component('VueDatePicker', VueDatePicker)
 app.use(router)
 app.use(pinia)
 

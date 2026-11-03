@@ -3,9 +3,9 @@
         <h2>Calendar 설정</h2>
         <span class="uk-text-muted">
             <h6>달력 크기 조절(가로)</h6>
-            <input class="uk-range uk-width-1-2" type="range" v-model="calendarWidth" min="1024" :max="calendarMaxSize[0]" step="1">
+            <input class="uk-range uk-width-1-2" type="range" v-model.number="calendarWidth" min="1024" :max="calendarMaxSize[0]" step="1" :disabled="!windowSizeReady" @change="flushWindowSize">
             <h6 style="margin-top: 20px;">달력 크기 조절(세로)</h6>
-            <input class="uk-range uk-width-1-2" type="range" v-model="calendarHeight" min="903" :max="calendarMaxSize[1]" step="1">
+            <input class="uk-range uk-width-1-2" type="range" v-model.number="calendarHeight" min="576" :max="calendarMaxSize[1]" step="1" :disabled="!windowSizeReady" @change="flushWindowSize">
             
             <h4>달력 보기 타입 변경</h4>
             <p>
@@ -72,62 +72,54 @@ const store = inject("DeskCalStore") as DesktopCalStore
 
 const calendarWidth = ref(1024)
 const calendarHeight = ref(903)
-// const calendarSize = ref([1024, 576])
 const calendarMaxSize = ref([1024, 903])
-
-interface caltype {
-    background: {
-        r: number,
-        g: number,
-        b: number,
-        a: number
-    },
-    color: {
-        r: number,
-        g: number,
-        b: number,
-        a: number
-    },
-    buttonType: string
-}
+const windowSizeReady = ref(false)
+let resizeFrame: number | undefined
+let disposed = false
 
 const calendarList = ref<CalendarListEntry[]>([])
-const calendarType = ref("month")
-const borderColor = ref<any>("")
-const backgroundColor = ref<any>("")
-const calendarStyle = ref<caltype>({
-    background: {
-        r: 255,
-        g: 255,
-        b: 255,
-        a: 0.3
-    },
-    color: {
-        r: 0,
-        g: 0,
-        b: 0,
-        a: 1
-    },
-    buttonType: "primary"
-})
+const calendarType = ref(store.getOptions("calendarType"))
+const calendarStyle = ref(store.getOptions("calendar"))
+const borderColor = ref<any>(convertColor("hex", calendarStyle.value.color))
+const backgroundColor = ref<any>(convertColor("hex", calendarStyle.value.background))
 
 function updateWindowSize() {
+    if (!windowSizeReady.value) {
+        return
+    }
     if (576 <= calendarHeight.value && calendarHeight.value <= calendarMaxSize.value[1]) {
         if (1024 <= calendarWidth.value && calendarWidth.value <= calendarMaxSize.value[0]) {
-            // console.log(calendarWidth.value, calendarHeight.value)
             desktopApi.setProgramSize(calendarWidth.value, calendarHeight.value)
         }
     }
 }
 
-function saveCalendar() {
-    desktopApi.saveCalendarList(calendarList.value)
+function queueWindowSize() {
+    if (!windowSizeReady.value || resizeFrame !== undefined) {
+        return
+    }
+    resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = undefined
+        updateWindowSize()
+    })
+}
+
+function flushWindowSize() {
+    if (resizeFrame !== undefined) {
+        cancelAnimationFrame(resizeFrame)
+        resizeFrame = undefined
+        updateWindowSize()
+    }
+}
+
+async function saveCalendar() {
+    await desktopApi.saveCalendarList(calendarList.value)
     desktopApi.requestReloadCalendar()
 }
 
-function deleteToken() {
+async function deleteToken() {
     calendarList.value = []
-    desktopApi.saveCalendarList(calendarList.value)
+    await desktopApi.saveCalendarList(calendarList.value)
     desktopApi.deleteToken()
 }
 
@@ -158,37 +150,38 @@ onMounted(async () => {
     stopCalendarListReset = desktopApi.onCalendarListReset((value) => {
         calendarList.value = value
     })
-    calendarList.value = await desktopApi.getCalendarList()
-    calendarStyle.value = store.getOptions("calendar")
-    borderColor.value = convertColor("hex", calendarStyle.value.color)
-    backgroundColor.value = convertColor("hex", calendarStyle.value.background)
-
-    calendarType.value = store.getOptions("calendarType")
-
-    // electronSizeList.value = await useGetElectronSizeList()
-    var pgsize = await desktopApi.getProgramSize()
-    // max 크기 지정 후 vue반영을 기다려야 v-model값이 적용됨 ==> await nextTick()으로 임시 해결
-    // console.log(calendarMaxSize.value)
-    calendarMaxSize.value = pgsize.displayArea
-    await nextTick()
-    // calendarSize.value = pgsize.window
-    calendarWidth.value = pgsize.window[0]
-    calendarHeight.value = pgsize.window[1]
-    // calendarWidth.value = pgsize.window[0]
-    // calendarHeight.value = pgsize.window[1]
+    const calendarListRequest = desktopApi.getCalendarList().then((value) => {
+        if (!disposed) {
+            calendarList.value = value
+        }
+    })
+    const windowSizeRequest = desktopApi.getProgramSize().then(async (size) => {
+        if (disposed) {
+            return
+        }
+        calendarMaxSize.value = size.displayArea
+        await nextTick()
+        if (disposed) {
+            return
+        }
+        calendarWidth.value = size.window[0]
+        calendarHeight.value = size.window[1]
+        // Let the initial values settle without resizing the main window.
+        await nextTick()
+        if (!disposed) {
+            windowSizeReady.value = true
+        }
+    })
+    await Promise.all([calendarListRequest, windowSizeRequest])
 })
 
 onBeforeUnmount(() => {
+    disposed = true
+    flushWindowSize()
     stopCalendarListReset?.()
 })
 
-watch(calendarWidth, (_newValue) => {
-    updateWindowSize()
-})
-
-watch(calendarHeight, (_newValue) => {
-    updateWindowSize()
-})
+watch([calendarWidth, calendarHeight], queueWindowSize)
 
 watch(borderColor, (newValue) => {
     if ((typeof newValue) == "string") {

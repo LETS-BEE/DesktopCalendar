@@ -127,7 +127,7 @@ export function registerIpcHandlers(options: RegisterIpcOptions) {
       event.reply(IPC_CHANNELS.authChanged, false)
     }
   })
-  on(IPC_CHANNELS.saveCalendarList, async (_event, data) => {
+  handle(IPC_CHANNELS.saveCalendarList, async (_event, data) => {
     await saveCalendarList(parseCalendarList(data))
   })
   handle(IPC_CHANNELS.getCalendarColor, () => getCalendarColors())

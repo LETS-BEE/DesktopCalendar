@@ -31,6 +31,7 @@ async function runElectron() {
   const errors = []
   const queries = []
   const sizes = []
+  let mouseIgnored = false
   let calendars = [
     { id: 'work', summary: 'Work', checked: true, primary: true, isprimary: true, accessRole: 'owner', colorId: '1' },
     { id: 'personal', summary: 'Personal', checked: true, accessRole: 'owner', colorId: '1' },
@@ -61,7 +62,9 @@ async function runElectron() {
   }
 
   ipcMain.handle('getNoteMemo', () => '')
-  ipcMain.handle('getAppVersion', () => '3.2.0-test')
+  ipcMain.on('enableMouse', () => { mouseIgnored = false })
+  ipcMain.on('disableMouse', () => { mouseIgnored = true })
+  ipcMain.handle('getAppVersion', () => '3.2.1-test')
   ipcMain.handle('getAutoStartProgram', () => false)
   ipcMain.handle('getWindowSize', () => ({ window: mainWindow.getSize(), displayArea: [1920, 1080] }))
   ipcMain.handle('getCalendarList', async (event) => {
@@ -122,6 +125,31 @@ async function runElectron() {
     await waitFor(() => evaluate(mainWindow, `getComputedStyle(document.querySelector('#calendar')).backgroundColor === 'rgba(120, 30, 70, 0.3)'`), 'custom calendar background')
     assert.equal(await evaluate(mainWindow, `getComputedStyle(document.querySelector('#calendar .fc-classic-Jk3')).backgroundColor`), 'rgba(0, 0, 0, 0)')
 
+    const day = await evaluate(mainWindow, `(() => {
+      const cell = Array.from(document.querySelectorAll('#calendar .calendar-day-cell[data-date]')).find((element) => !element.querySelector('.calendar-pointer-interactive'));
+      const rect = cell.getBoundingClientRect();
+      const x = Math.round(rect.left + rect.width / 2), y = Math.round(rect.top + rect.height / 2);
+      return { date: cell.dataset.date, x, y, hitDate: document.elementFromPoint(x, y)?.closest('.calendar-day-cell')?.dataset.date };
+    })()`)
+    assert.equal(day.hitDate, day.date, 'empty day cells must receive hover hit testing')
+    mainWindow.webContents.sendInputEvent({ type: 'mouseMove', x: day.x, y: day.y })
+    await waitFor(() => evaluate(mainWindow, `Boolean(document.querySelector('.calendar-day-add-button'))`), 'add button on an empty day')
+    assert.equal(mouseIgnored, true, 'empty day hover must preserve desktop click-through')
+    const addPoint = await evaluate(mainWindow, `(() => {
+      const button = document.querySelector('.calendar-day-add-button');
+      const rect = button.getBoundingClientRect();
+      const x = Math.round(rect.left + rect.width / 2), y = Math.round(rect.top + rect.height / 2);
+      return { x, y, clickable: Boolean(document.elementFromPoint(x, y)?.closest('.calendar-day-add-button')) };
+    })()`)
+    assert.ok(addPoint.clickable, 'day headers must not cover the add button')
+    mainWindow.webContents.sendInputEvent({ type: 'mouseMove', x: addPoint.x, y: addPoint.y })
+    await waitFor(() => !mouseIgnored, 'mouse input enabled on the day add button')
+    mainWindow.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, x: addPoint.x, y: addPoint.y })
+    mainWindow.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, x: addPoint.x, y: addPoint.y })
+    await waitFor(() => evaluate(mainWindow, `Boolean(document.querySelector('.event-add')?.closest('.uk-drop.uk-open'))`), 'event form from the day add button')
+    assert.deepEqual(await evaluate(mainWindow, `Array.from(document.querySelectorAll('.event-add [data-test-id="dp-input"]')).map((input) => input.value)`), [day.date, day.date])
+    await evaluate(mainWindow, `document.body.click()`)
+
     const checkPopup = async () => {
       await evaluate(mainWindow, `(${visibleEvent}).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))`)
       await waitFor(() => evaluate(mainWindow, `document.querySelector('#gcal-event').getBoundingClientRect().width > 0`), 'visible event popup')
@@ -167,7 +195,7 @@ async function runElectron() {
     settingsWindow.destroy()
     await waitFor(() => evaluate(mainWindow, `!document.querySelector('#createOption').disabled`), 'settings button after closing')
     assert.deepEqual(errors, [], 'renderer/preload errors')
-    console.log('Renderer smoke passed: startup, transparency, popup bounds, settings isolation, live resize, calendar save/reload.')
+    console.log('Renderer smoke passed: startup, day hover/add, transparency, popup bounds, settings isolation, live resize, calendar save/reload.')
   } finally {
     if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.destroy()
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy()

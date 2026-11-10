@@ -329,23 +329,22 @@ const addEventDate = (st?:string) => {
 }
 
 const addPlusBtn = (daycellargs: MountInfo<DayCellInfo>) => {
-    const plusbtn = document.createElement('a')
+    const el = daycellargs.el
+    const date = el.getAttribute('data-date') as string
+    const plusbtn = document.createElement('button')
+    plusbtn.type = 'button'
     plusbtn.setAttribute('uk-icon', 'plus-circle')
-    plusbtn.setAttribute('data-date', daycellargs.el.getAttribute('data-date') as string)
-    plusbtn.classList.add('calendar-pointer-interactive')
+    plusbtn.setAttribute('data-date', date)
+    plusbtn.setAttribute('aria-label', `${date} 이벤트 추가`)
+    plusbtn.classList.add('uk-icon', 'calendar-day-add-button', 'calendar-pointer-interactive')
     plusbtn.onmouseover = useEnableMouse
     plusbtn.onmouseout = useDisableMouse
-    plusbtn.style.margin = '4px'
-    plusbtn.style.position = 'absolute'
-    plusbtn.style.zIndex = '4'
-    
+    plusbtn.onclick = () => addEventDate(date)
 
-    var el = daycellargs.el
     el.addEventListener('mouseleave', (_event) => {
-        el.removeChild(plusbtn)
+        plusbtn.remove()
     })
     el.addEventListener('mouseenter', (_event) => {
-        plusbtn.onclick = () => addEventDate(el.getAttribute('data-date') as string)
         el.prepend(plusbtn)
     })
 }
@@ -623,10 +622,22 @@ watch(() => store.options.calendar.buttonType, (newValue) => {
     background:white;
 }
 
-/*Allow pointer-events through*/
-.calendar-day-header,
-.calendar-day-cell {
+/* Keep headers passive while day cells receive forwarded mouse movement. */
+.calendar-day-header {
     pointer-events:none
+}
+.calendar-day-cell {
+    pointer-events:auto;
+}
+
+.calendar-day-add-button {
+    position: absolute;
+    top: 4px;
+    inset-inline-start: 4px;
+    width: 20px;
+    height: 20px;
+    /* FullCalendar 7 places day headers at 4 and event rows at 5. */
+    z-index: 6;
 }
 /*Turn pointer events back on*/
 .calendar-pointer-interactive {
